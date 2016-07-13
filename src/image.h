@@ -9,6 +9,7 @@ struct colrange {
 	int low, high;
 	int rev;
 	unsigned int rate;
+	struct colrange *next;
 };
 
 struct image {
@@ -19,6 +20,7 @@ struct image {
 	unsigned char *pixels;
 };
 
+int gen_test_image(struct image *img);
 int load_image(struct image *img, const char *fname);
 void destroy_image(struct image *img);
 

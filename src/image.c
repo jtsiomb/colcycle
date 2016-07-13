@@ -1,9 +1,13 @@
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <errno.h>
+#include <ctype.h>
 #include <math.h>
+#include <alloca.h>
 #include "image.h"
 
-int load_image(struct image *img, const char *fname)
+int gen_test_image(struct image *img)
 {
 	int i, j;
 	unsigned char *pptr;
@@ -46,9 +50,365 @@ int load_image(struct image *img, const char *fname)
 	return 0;
 }
 
+#define MAX_TOKEN_SIZE	256
+static int image_block(FILE *fp, struct image *img);
+static int nextc = -1;
+static char token[MAX_TOKEN_SIZE];
+
+int load_image(struct image *img, const char *fname)
+{
+	FILE *fp;
+	int c;
+
+	if(!(fp = fopen(fname, "rb"))) {
+		fprintf(stderr, "failed to open file: %s: %s\n", fname, strerror(errno));
+		return -1;
+	}
+
+	/* find the start of the root block */
+	while((c = fgetc(fp)) != -1 && c != '{');
+	if(feof(fp)) {
+		fprintf(stderr, "invalid image format, no image block found: %s\n", fname);
+		return -1;
+	}
+
+	nextc = c;	/* prime the pump with the extra char we read above */
+	if(image_block(fp, img) == -1) {
+		fprintf(stderr, "failed to read image block from: %s\n", fname);
+		fclose(fp);
+		return -1;
+	}
+
+	fclose(fp);
+	return 0;
+}
+
 void destroy_image(struct image *img)
 {
 	free(img->pixels);
 	free(img->range);
 	memset(img, 0, sizeof *img);
+}
+
+/* ---- parser ---- */
+
+enum {
+	TOKEN_NUM,
+	TOKEN_NAME,
+	TOKEN_STR
+};
+
+static int next_token(FILE *fp)
+{
+	char *ptr;
+
+	while(nextc != -1 && isspace(nextc)) {
+		nextc = fgetc(fp);
+	}
+	if(nextc == -1) {
+		return -1;
+	}
+
+	switch(nextc) {
+	case '{':
+	case '}':
+	case ',':
+	case '[':
+	case ']':
+	case ':':
+		token[0] = nextc;
+		token[1] = 0;
+		nextc = fgetc(fp);
+		return token[0];
+
+	case '\'':
+		ptr = token;
+		nextc = fgetc(fp);
+		while(nextc != -1 && nextc != '\'') {
+			*ptr++ = nextc;
+			nextc = fgetc(fp);
+		}
+		nextc = fgetc(fp);
+		return TOKEN_STR;
+
+	default:
+		break;
+	}
+
+	if(isalpha(nextc)) {
+		ptr = token;
+		while(nextc != -1 && isalpha(nextc)) {
+			*ptr++ = nextc;
+			nextc = fgetc(fp);
+		}
+		*ptr = 0;
+		return TOKEN_NAME;
+	}
+	if(isdigit(nextc)) {
+		ptr = token;
+		while(nextc != -1 && isdigit(nextc)) {
+			*ptr++ = nextc;
+			nextc = fgetc(fp);
+		}
+		*ptr = 0;
+		return TOKEN_NUM;
+	}
+
+	fprintf(stderr, "next_token: unexpected character: %c\n", nextc);
+	return -1;
+}
+
+static int expect(FILE *fp, int tok)
+{
+	if(next_token(fp) != tok) {
+		return 0;
+	}
+	return 1;
+}
+
+static const char *toktypestr(int tok)
+{
+	static char buf[] = "' '";
+	switch(tok) {
+	case TOKEN_NUM:
+		return "number";
+	case TOKEN_NAME:
+		return "name";
+	case TOKEN_STR:
+		return "string";
+	default:
+		break;
+	}
+	buf[1] = tok;
+	return buf;
+}
+
+#define EXPECT(fp, x) \
+	do { \
+		if(!expect(fp, x)) { \
+			fprintf(stderr, "%s: expected: %s, found: %s\n", __func__, toktypestr(x), token); \
+			return -1; \
+		} \
+	} while(0)
+
+static int palette(FILE *fp, struct image *img)
+{
+	int tok, cidx = 0;
+	struct color col, *cptr;
+
+	EXPECT(fp, '[');
+
+	while((tok = next_token(fp)) == '[') {
+		cptr = cidx < 256 ? &img->palette[cidx] : &col;
+		++cidx;
+
+		EXPECT(fp, TOKEN_NUM);
+		cptr->r = atoi(token);
+		EXPECT(fp, ',');
+		EXPECT(fp, TOKEN_NUM);
+		cptr->g = atoi(token);
+		EXPECT(fp, ',');
+		EXPECT(fp, TOKEN_NUM);
+		cptr->b = atoi(token);
+		EXPECT(fp, ']');
+	}
+
+	if(tok != ']') {
+		fprintf(stderr, "palette must be closed by a ']' token\n");
+		return -1;
+	}
+	return 0;
+}
+
+static int crange(FILE *fp, struct colrange *rng)
+{
+	int tok, val;
+	char name[MAX_TOKEN_SIZE];
+
+	EXPECT(fp, '{');
+
+	while((tok = next_token(fp)) != '}') {
+		EXPECT(fp, TOKEN_NAME);
+		strcpy(name, token);
+		EXPECT(fp, ':');
+		EXPECT(fp, TOKEN_NUM);
+		val = atoi(token);
+
+		if(strcmp(name, "reverse") == 0) {
+			rng->rev = val;
+		} else if(strcmp(name, "rate") == 0) {
+			rng->rate = val;
+		} else if(strcmp(name, "low") == 0) {
+			rng->low = val;
+		} else if(strcmp(name, "high") == 0) {
+			rng->high = val;
+		} else {
+			fprintf(stderr, "invalid attribute %s in cycles range\n", name);
+			return -1;
+		}
+	}
+
+	return 0;
+}
+
+static int cycles(FILE *fp, struct image *img)
+{
+	struct colrange *list, *rng;
+
+	EXPECT(fp, '[');
+
+	img->num_ranges = 0;
+	while(nextc == '{') {
+		if(!(rng = malloc(sizeof *rng))) {
+			perror("failed to allocate color range");
+			goto err;
+		}
+		if(crange(fp, rng) == -1) {
+			free(rng);
+			goto err;
+		}
+		rng->next = list;
+		list = rng;
+		++img->num_ranges;
+
+		if(nextc == ',') {
+			next_token(fp);	/* eat the comma */
+		}
+	}
+
+	if(!expect(fp, ']')) {
+		fprintf(stderr, "cycles: missing closing bracket\n");
+		goto err;
+	}
+
+	if(img->num_ranges) {
+		struct colrange *rptr;
+		if(!(img->range = malloc(img->num_ranges * sizeof *img->range))) {
+			perror("cycles: failed to allocate range array\n");
+			goto err;
+		}
+
+		rptr = img->range;
+		while(list) {
+			rng = list;
+			list = list->next;
+			*rptr++ = *rng;
+			free(rng);
+		}
+	}
+	return 0;
+
+err:
+	while(list) {
+		rng = list;
+		list = list->next;
+		free(rng);
+	}
+	return -1;
+}
+
+static int pixels(FILE *fp, struct image *img)
+{
+	int tok, num_pixels;
+	unsigned char *pptr;
+
+	if(img->width <= 0 || img->height <= 0) {
+		fprintf(stderr, "pixel block found before defining the image dimensions!\n");
+		return -1;
+	}
+	num_pixels = img->width * img->height;
+	if(!(img->pixels = malloc(num_pixels))) {
+		perror("failed to allocate pixels");
+		return -1;
+	}
+	pptr = img->pixels;
+
+	EXPECT(fp, '[');
+
+	while((tok = next_token(fp)) == TOKEN_NUM) {
+		if(pptr - img->pixels >= num_pixels) {
+			pptr = 0;
+			fprintf(stderr, "more pixel data provided than the specified image dimensions\n");
+		}
+		if(!pptr) continue;
+		*pptr++ = atoi(token);
+
+		if(nextc == ',') {
+			next_token(fp);	/* eat comma */
+		}
+	}
+
+	EXPECT(fp, ']');
+	return 0;
+}
+
+static int attribute(FILE *fp, struct image *img)
+{
+	char *attr_name;
+
+	if(!expect(fp, TOKEN_NAME)) {
+		return -1;
+	}
+	attr_name = alloca(strlen(token) + 1);
+	strcpy(attr_name, token);
+
+	if(!expect(fp, ':')) {
+		return -1;
+	}
+
+	printf("attr: %s\n", attr_name);
+
+	if(strcmp(attr_name, "filename") == 0) {
+		if(!expect(fp, TOKEN_STR)) {
+			fprintf(stderr, "attribute: filename should be a string\n");
+			return -1;
+		}
+
+	} else if(strcmp(attr_name, "width") == 0 || strcmp(attr_name, "height") == 0) {
+		int *dst = attr_name[0] == 'w' ? &img->width : &img->height;
+		if(!expect(fp, TOKEN_NUM)) {
+			fprintf(stderr, "attribute: %s should be a number\n", attr_name);
+			return -1;
+		}
+		*dst = atoi(token);
+
+	} else if(strcmp(attr_name, "colors") == 0) {
+		if(palette(fp, img) == -1) {
+			fprintf(stderr, "attribute: colors should be a palette\n");
+			return -1;
+		}
+
+	} else if(strcmp(attr_name, "cycles") == 0) {
+		if(cycles(fp, img) == -1) {
+			fprintf(stderr, "attribute: cycles should be a list of palranges\n");
+			return -1;
+		}
+
+	} else if(strcmp(attr_name, "pixels") == 0) {
+		if(pixels(fp, img) == -1) {
+			fprintf(stderr, "attribute: pixels should be a list of indices\n");
+			return -1;
+		}
+
+	} else {
+		fprintf(stderr, "unknown attribute: %s\n", attr_name);
+		return -1;
+	}
+	return 0;
+}
+
+static int image_block(FILE *fp, struct image *img)
+{
+	EXPECT(fp, '{');
+
+	img->width = img->height = -1;
+
+	while(attribute(fp, img) != -1) {
+		if(nextc == ',') {
+			next_token(fp);	/* eat comma */
+		}
+	}
+
+	EXPECT(fp, '}');
+	return 0;
 }

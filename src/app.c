@@ -9,13 +9,16 @@ int app_init(int argc, char **argv)
 	int i, j;
 	unsigned char *dptr = fbpixels;
 
-	if(!argv[1]) {
-		fprintf(stderr, "pass the filename of a color cycling image\n");
-		return -1;
-	}
-	if(load_image(&img, argv[1]) == -1) {
-		fprintf(stderr, "failed to load image: %s\n", argv[1]);
-		return -1;
+	if(argv[1]) {
+		if(load_image(&img, argv[1]) == -1) {
+			fprintf(stderr, "failed to load image: %s\n", argv[1]);
+			return -1;
+		}
+	} else {
+		if(gen_test_image(&img) == -1) {
+			fprintf(stderr, "failed to generate test image\n");
+			return -1;
+		}
 	}
 
 	for(i=0; i<256; i++) {
@@ -41,10 +44,23 @@ void app_cleanup(void)
 
 void app_draw(void)
 {
-	int i;
-	for(i=0; i<256; i++) {
-		int idx = (i + time_msec * img.range[0].rate / 10000) & 0xff;
-		set_palentry(i, img.palette[idx].r, img.palette[idx].g, img.palette[idx].b);
+	int i, j;
+
+	for(i=0; i<img.num_ranges; i++) {
+		unsigned long tm = time_msec * img.range[i].rate / 10000;
+		int rsize = img.range[i].high - img.range[i].low + 1;
+		for(j=0; j<rsize; j++) {
+			int idx;
+			if(img.range[i].rev) {
+				if((idx = (j - tm) % rsize) < 0) {
+					idx += rsize;
+				}
+			} else {
+				idx = (j + tm) % rsize;
+			}
+			idx += img.range[i].low;
+			set_palentry(j, img.palette[idx].r, img.palette[idx].g, img.palette[idx].b);
+		}
 	}
 }
 
