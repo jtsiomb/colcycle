@@ -1,8 +1,8 @@
-src = $(wildcard src/*.c)
+src = $(wildcard src/*.c) $(wildcard src/sdl/*.c)
 obj = $(src:.c=.o)
 bin = ccimg
 
-CFLAGS = -pedantic -Wall -g `pkg-config --cflags sdl`
+CFLAGS = -pedantic -Wall -g -Isrc `pkg-config --cflags sdl`
 LDFLAGS = `pkg-config --libs sdl` -lm
 
 $(bin): $(obj)
