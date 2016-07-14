@@ -93,9 +93,11 @@ int load_image(struct image *img, const char *fname)
 
 void destroy_image(struct image *img)
 {
-	free(img->pixels);
-	free(img->range);
-	memset(img, 0, sizeof *img);
+	if(img) {
+		free(img->pixels);
+		free(img->range);
+		memset(img, 0, sizeof *img);
+	}
 }
 
 /* ---- parser ---- */

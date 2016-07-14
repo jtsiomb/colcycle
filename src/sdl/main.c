@@ -39,11 +39,13 @@ int main(int argc, char **argv)
 	SDL_UnlockSurface(fbsurf);
 	SDL_UpdateRect(fbsurf, 0, 0, 0, 0);
 
-	SDL_ShowCursor(0);
+	if(sdl_flags & SDL_FULLSCREEN) {
+		SDL_ShowCursor(0);
+	}
 
 	start_msec = SDL_GetTicks();
 
-	for(;;) {
+	while(!quit) {
 		SDL_Event ev;
 		while(SDL_PollEvent(&ev)) {
 			switch(ev.type) {

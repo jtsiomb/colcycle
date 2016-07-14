@@ -23,7 +23,7 @@ int main(int argc, char **argv)
 	}
 	reset_timer();
 
-	for(;;) {
+	while(!quit) {
 		int key;
 		while((key = kb_getkey()) != -1) {
 			app_keyboard(key, 1);
