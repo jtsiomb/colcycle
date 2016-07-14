@@ -98,13 +98,16 @@ enum {
 	TOKEN_STR
 };
 
+static int next_char(FILE *fp)
+{
+	while((nextc = fgetc(fp)) != -1 && isspace(nextc));
+	return nextc;
+}
+
 static int next_token(FILE *fp)
 {
 	char *ptr;
 
-	while(nextc != -1 && isspace(nextc)) {
-		nextc = fgetc(fp);
-	}
 	if(nextc == -1) {
 		return -1;
 	}
@@ -118,17 +121,17 @@ static int next_token(FILE *fp)
 	case ':':
 		token[0] = nextc;
 		token[1] = 0;
-		nextc = fgetc(fp);
+		nextc = next_char(fp);
 		return token[0];
 
 	case '\'':
 		ptr = token;
-		nextc = fgetc(fp);
+		nextc = next_char(fp);
 		while(nextc != -1 && nextc != '\'') {
 			*ptr++ = nextc;
 			nextc = fgetc(fp);
 		}
-		nextc = fgetc(fp);
+		nextc = next_char(fp);
 		return TOKEN_STR;
 
 	default:
@@ -139,7 +142,7 @@ static int next_token(FILE *fp)
 		ptr = token;
 		while(nextc != -1 && isalpha(nextc)) {
 			*ptr++ = nextc;
-			nextc = fgetc(fp);
+			nextc = next_char(fp);
 		}
 		*ptr = 0;
 		return TOKEN_NAME;
@@ -148,12 +151,14 @@ static int next_token(FILE *fp)
 		ptr = token;
 		while(nextc != -1 && isdigit(nextc)) {
 			*ptr++ = nextc;
-			nextc = fgetc(fp);
+			nextc = next_char(fp);
 		}
 		*ptr = 0;
 		return TOKEN_NUM;
 	}
 
+	token[0] = nextc;
+	token[1] = 0;
 	fprintf(stderr, "next_token: unexpected character: %c\n", nextc);
 	return -1;
 }
@@ -211,6 +216,10 @@ static int palette(FILE *fp, struct image *img)
 		EXPECT(fp, TOKEN_NUM);
 		cptr->b = atoi(token);
 		EXPECT(fp, ']');
+
+		if(nextc == ',') {
+			next_token(fp);	/* skip comma */
+		}
 	}
 
 	if(tok != ']') {
@@ -222,12 +231,12 @@ static int palette(FILE *fp, struct image *img)
 
 static int crange(FILE *fp, struct colrange *rng)
 {
-	int tok, val;
+	int val;
 	char name[MAX_TOKEN_SIZE];
 
 	EXPECT(fp, '{');
 
-	while((tok = next_token(fp)) != '}') {
+	while(nextc != -1 && nextc != '}') {
 		EXPECT(fp, TOKEN_NAME);
 		strcpy(name, token);
 		EXPECT(fp, ':');
@@ -246,14 +255,19 @@ static int crange(FILE *fp, struct colrange *rng)
 			fprintf(stderr, "invalid attribute %s in cycles range\n", name);
 			return -1;
 		}
+
+		if(nextc == ',') {
+			next_token(fp);
+		}
 	}
 
+	EXPECT(fp, '}');
 	return 0;
 }
 
 static int cycles(FILE *fp, struct image *img)
 {
-	struct colrange *list, *rng;
+	struct colrange *list = 0, *rng;
 
 	EXPECT(fp, '[');
 
@@ -338,7 +352,10 @@ static int pixels(FILE *fp, struct image *img)
 		}
 	}
 
-	EXPECT(fp, ']');
+	if(tok != ']') {
+		printf("pixels: missing closing bracket\n");
+		return -1;
+	}
 	return 0;
 }
 
@@ -355,8 +372,6 @@ static int attribute(FILE *fp, struct image *img)
 	if(!expect(fp, ':')) {
 		return -1;
 	}
-
-	printf("attr: %s\n", attr_name);
 
 	if(strcmp(attr_name, "filename") == 0) {
 		if(!expect(fp, TOKEN_STR)) {
@@ -408,7 +423,5 @@ static int image_block(FILE *fp, struct image *img)
 			next_token(fp);	/* eat comma */
 		}
 	}
-
-	EXPECT(fp, '}');
 	return 0;
 }

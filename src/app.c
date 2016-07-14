@@ -1,8 +1,10 @@
 #include <stdio.h>
+#include <math.h>
 #include "app.h"
 #include "image.h"
 
 static struct image img;
+static int blend = 1;
 
 int app_init(int argc, char **argv)
 {
@@ -42,24 +44,73 @@ void app_cleanup(void)
 {
 }
 
+#define LERP(a, b, t)	((a) + ((b) - (a)) * (t))
+
 void app_draw(void)
 {
 	int i, j;
 
 	for(i=0; i<img.num_ranges; i++) {
-		unsigned long tm = time_msec * img.range[i].rate / 10000;
+		if(!img.range[i].rate) continue;
+		int rev = img.range[i].rev;
 		int rsize = img.range[i].high - img.range[i].low + 1;
-		for(j=0; j<rsize; j++) {
-			int idx;
-			if(img.range[i].rev) {
-				if((idx = (j - tm) % rsize) < 0) {
-					idx += rsize;
-				}
+
+		float offs;
+		int ioffs;
+
+		/* TODO reverse engineer and rewrite this block -------------------- */
+		float tm = (float)time_msec / (1000.0 / (img.range[i].rate / 280.0));
+
+		if(rev < 3) {
+			offs = fmod(tm, (float)rsize);
+		} else if(rev == 3) {	// ping-pong
+			offs = fmod(tm, (float)(rsize * 2));
+			if(offs >= rsize) offs = (rsize * 2) - offs;
+		} else if(rev < 6) { // sine
+			float x = fmod(tm, (float)rsize);
+			offs = sin((x * M_PI * 2.0) / (float)rsize) + 1.0;
+			if(rev == 4) {
+				offs *= rsize / 4;
 			} else {
-				idx = (j + tm) % rsize;
+				offs *= rsize / 2;
 			}
-			idx += img.range[i].low;
-			set_palentry(j, img.palette[idx].r, img.palette[idx].g, img.palette[idx].b);
+		}
+		/* ----------------------------------------------------------------- */
+		ioffs = (int)floor(offs);
+
+		/* reverse when rev is 2 */
+		rev = rev == 2 ? 1 : 0;
+
+		for(j=0; j<rsize; j++) {
+			int pidx, to, next;
+
+			pidx = j + img.range[i].low;
+
+			if(rev) {
+				to = (j + ioffs) % rsize;
+				next = (to + 1) % rsize;
+			} else {
+				if((to = (j - ioffs) % rsize) < 0) {
+					to += rsize;
+				}
+				if((next = to - 1) < 0) {
+					next += rsize;
+				}
+			}
+			to += img.range[i].low;
+
+			if(blend) {
+				next += img.range[i].low;
+
+				float t = offs - (int)offs;
+				float r = LERP(img.palette[to].r, img.palette[next].r, t);
+				float g = LERP(img.palette[to].g, img.palette[next].g, t);
+				float b = LERP(img.palette[to].b, img.palette[next].b, t);
+
+				set_palentry(pidx, (int)r, (int)g, (int)b);
+			} else {
+				set_palentry(pidx, img.palette[to].r, img.palette[to].g, img.palette[to].b);
+			}
 		}
 	}
 }
@@ -70,6 +121,11 @@ void app_keyboard(int key, int state)
 		switch(key) {
 		case 27:
 			app_quit();
+			break;
+
+		case 'b':
+		case 'B':
+			blend = !blend;
 			break;
 
 		default:
