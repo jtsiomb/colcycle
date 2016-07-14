@@ -3,3 +3,7 @@
 \.swp$
 ^images/
 ^ccimg$
+\.OBJ$
+\.EXE$
+\.LNK$
+\.exe$
