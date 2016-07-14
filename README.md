@@ -41,23 +41,24 @@ FAQ
 ---
 1. Why DOS?
 
-The whole point of all this was to use Mark Ferrari's awesome color cycling
-images as a screensaver on my dos machine. The SDL backend is just there for
-ease of development, so that I can write most of the code on GNU/Linux.
+  The whole point of all this was to use Mark Ferrari's awesome color cycling
+  images as a screensaver on my dos machine. The SDL backend is just there for
+  ease of development, so that I can write most of the code on GNU/Linux.
 
 2. Where can I find `DOS4GW.EXE`?
 
-If you got the source from git, there won't be any binaries inside. Get the release
-tarball of `colcycle`, which contains all the necessary binaries, and copy
-`dos4gw.exe` from there. Alternatively, pretty much every 90s PC game has it.
+  If you got the source from git, there won't be any binaries inside. Get the
+  release tarball of `colcycle`, which contains all the necessary binaries, and
+  copy `dos4gw.exe` from there. Alternatively, pretty much every 90s PC game
+  has it.
 
 3. Why don't you include any actual images with the code?
 
-I don't own the rights to Mark Ferrari's artwork, so I can't redistirbute it.
-Use the `download_images` script to get them directly from the canvascycle
-website.
+  I don't own the rights to Mark Ferrari's artwork, so I can't redistirbute it.
+  Use the `download_images` script to get them directly from the `canvascycle`
+  website.
 
 4. Why don't you support LBM images?
 
-I don't have any. Feel free to send me any good ones to tempt me to write an
-LBM loader.
+  I don't have any. Feel free to send me any good ones to tempt me to write an
+  LBM loader.
