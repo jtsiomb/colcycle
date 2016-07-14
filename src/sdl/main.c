@@ -5,10 +5,10 @@
 
 static SDL_Surface *fbsurf;
 static int quit;
+static unsigned long start_msec;
 
 int main(int argc, char **argv)
 {
-	unsigned long start_msec;
 	unsigned int sdl_flags = SDL_HWPALETTE | SDL_HWSURFACE | SDL_FULLSCREEN;
 
 	char *env = getenv("FULLSCREEN");
@@ -83,6 +83,11 @@ break_evloop:
 	SDL_ShowCursor(1);
 	SDL_Quit();
 	return 0;
+}
+
+unsigned long get_msec(void)
+{
+	return SDL_GetTicks() - start_msec;
 }
 
 void app_quit(void)

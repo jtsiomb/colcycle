@@ -152,7 +152,7 @@ void app_draw(void)
 					}
 					show_image(img);
 					fade_dir = 1;
-					fade_start = time_msec;
+					time_msec = fade_start = get_msec(); /* get fresh timestamp */
 					dt = 0;
 				} else {
 					set_image_palette(img);
