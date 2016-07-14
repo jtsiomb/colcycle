@@ -35,7 +35,7 @@ If you pass a directory name as an argument, the program will cycle through all
 images in that directory, showing each one for a few seconds.
 
 For the SDL version, you may set the environment variable `FULLSCREEN` to 0, if
-you with to run in a window.
+you wish to run in a window.
 
 FAQ
 ---
