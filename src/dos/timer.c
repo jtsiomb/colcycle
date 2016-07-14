@@ -1,6 +1,6 @@
 /*
-256-color 3D graphics hack for real-mode DOS.
-Copyright (C) 2011  John Tsiombikas <nuclear@member.fsf.org>
+colcycle - color cycling image viewer
+Copyright (C) 2016  John Tsiombikas <nuclear@member.fsf.org>
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
