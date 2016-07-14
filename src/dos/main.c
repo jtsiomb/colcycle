@@ -13,7 +13,9 @@ int main(int argc, char **argv)
 
 	fbwidth = 640;
 	fbheight = 480;
-	fbpixels = set_video_mode(fbwidth, fbheight, 8);
+	if(!(fbpixels = set_video_mode(fbwidth, fbheight, 8))) {
+		return 1;
+	}
 
 	if(app_init(argc, argv) == -1) {
 		set_text_mode();
@@ -43,9 +45,4 @@ break_evloop:
 void app_quit(void)
 {
 	quit = 1;
-}
-
-void set_palentry(int idx, unsigned char r, unsigned char g, unsigned char b)
-{
-	set_palette(idx, r, g, b);
 }

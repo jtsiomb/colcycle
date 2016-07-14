@@ -14,6 +14,6 @@ void app_keyboard(int key, int state);
 
 /* defined in main_*.c */
 void app_quit(void);
-void set_palentry(int idx, unsigned char r, unsigned char g, unsigned char b);
+void set_palette(int idx, int r, int g, int b);
 
 #endif	/* APP_H_ */

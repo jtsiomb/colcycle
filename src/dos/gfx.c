@@ -74,10 +74,11 @@ void *set_video_mode(int xsz, int ysz, int bpp)
 	}
 
 	/* attempt to set 8 bits of color per component in palettized modes */
-	if(bpp <= 8) {
+	/*if(bpp <= 8) {
 		pal_bits = vbe_set_palette_bits(8);
 		printlog("palette bits per color primary: %d\n", pal_bits);
 	}
+	*/
 
 	fbsize = xsz * ysz * mode_info->num_img_pages * (bpp / CHAR_BIT);
 	return (void*)dpmi_mmap(mode_info->fb_addr, fbsize);

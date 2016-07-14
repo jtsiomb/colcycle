@@ -29,8 +29,8 @@ int gen_test_image(struct image *img)
 	img->num_ranges = 1;
 	img->range[0].low = 0;
 	img->range[0].high = 255;
-	img->range[0].rev = 0;
-	img->range[0].rate = 500;
+	img->range[0].rev = 1;
+	img->range[0].rate = 5000;
 
 	if(!(img->pixels = malloc(img->width * img->height))) {
 		free(img->range);

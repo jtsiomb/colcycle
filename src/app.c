@@ -32,7 +32,7 @@ int app_init(int argc, char **argv)
 	}
 
 	for(i=0; i<256; i++) {
-		set_palentry(i, img.palette[i].r, img.palette[i].g, img.palette[i].b);
+		set_palette(i, img.palette[i].r, img.palette[i].g, img.palette[i].b);
 	}
 
 	for(i=0; i<fbheight; i++) {
@@ -117,9 +117,9 @@ void app_draw(void)
 				g = LERP(img.palette[to].g, img.palette[next].g, t);
 				b = LERP(img.palette[to].b, img.palette[next].b, t);
 
-				set_palentry(pidx, (int)r, (int)g, (int)b);
+				set_palette(pidx, (int)r, (int)g, (int)b);
 			} else {
-				set_palentry(pidx, img.palette[to].r, img.palette[to].g, img.palette[to].b);
+				set_palette(pidx, img.palette[to].r, img.palette[to].g, img.palette[to].b);
 			}
 		}
 	}

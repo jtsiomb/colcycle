@@ -85,7 +85,7 @@ void app_quit(void)
 	quit = 1;
 }
 
-void set_palentry(int idx, unsigned char r, unsigned char g, unsigned char b)
+void set_palette(int idx, int r, int g, int b)
 {
 	SDL_Color col;
 	col.r = r;
