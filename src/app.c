@@ -3,6 +3,10 @@
 #include "app.h"
 #include "image.h"
 
+#ifndef M_PI
+#define M_PI 3.141593
+#endif
+
 static struct image img;
 static int blend = 1;
 
@@ -51,22 +55,22 @@ void app_draw(void)
 	int i, j;
 
 	for(i=0; i<img.num_ranges; i++) {
-		if(!img.range[i].rate) continue;
-		int rev = img.range[i].rev;
-		int rsize = img.range[i].high - img.range[i].low + 1;
+		int rev, rsize, ioffs;
+		float offs, tm;
 
-		float offs;
-		int ioffs;
+		if(!img.range[i].rate) continue;
+		rev = img.range[i].rev;
+		rsize = img.range[i].high - img.range[i].low + 1;
 
 		/* TODO reverse engineer and rewrite this block -------------------- */
-		float tm = (float)time_msec / (1000.0 / (img.range[i].rate / 280.0));
+		tm = (float)time_msec / (1000.0 / (img.range[i].rate / 280.0));
 
 		if(rev < 3) {
 			offs = fmod(tm, (float)rsize);
-		} else if(rev == 3) {	// ping-pong
+		} else if(rev == 3) {	/* ping-pong */
 			offs = fmod(tm, (float)(rsize * 2));
 			if(offs >= rsize) offs = (rsize * 2) - offs;
-		} else if(rev < 6) { // sine
+		} else if(rev < 6) {	/* sine */
 			float x = fmod(tm, (float)rsize);
 			offs = sin((x * M_PI * 2.0) / (float)rsize) + 1.0;
 			if(rev == 4) {
@@ -100,12 +104,14 @@ void app_draw(void)
 			to += img.range[i].low;
 
 			if(blend) {
+				float t, r, g, b;
+
 				next += img.range[i].low;
 
-				float t = offs - (int)offs;
-				float r = LERP(img.palette[to].r, img.palette[next].r, t);
-				float g = LERP(img.palette[to].g, img.palette[next].g, t);
-				float b = LERP(img.palette[to].b, img.palette[next].b, t);
+				t = offs - (int)offs;
+				r = LERP(img.palette[to].r, img.palette[next].r, t);
+				g = LERP(img.palette[to].g, img.palette[next].g, t);
+				b = LERP(img.palette[to].b, img.palette[next].b, t);
 
 				set_palentry(pidx, (int)r, (int)g, (int)b);
 			} else {

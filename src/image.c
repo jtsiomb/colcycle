@@ -4,8 +4,16 @@
 #include <errno.h>
 #include <ctype.h>
 #include <math.h>
+#if defined(__WATCOMC__) || defined(_MSC_VER)
+#include <malloc.h>
+#else
 #include <alloca.h>
+#endif
 #include "image.h"
+
+#ifndef M_PI
+#define M_PI 3.141593
+#endif
 
 int gen_test_image(struct image *img)
 {
@@ -191,7 +199,7 @@ static const char *toktypestr(int tok)
 #define EXPECT(fp, x) \
 	do { \
 		if(!expect(fp, x)) { \
-			fprintf(stderr, "%s: expected: %s, found: %s\n", __func__, toktypestr(x), token); \
+			fprintf(stderr, "%s: expected: %s, found: %s\n", __FUNCTION__, toktypestr(x), token); \
 			return -1; \
 		} \
 	} while(0)
