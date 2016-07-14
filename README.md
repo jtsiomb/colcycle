@@ -56,3 +56,8 @@ tarball of `colcycle`, which contains all the necessary binaries, and copy
 I don't own the rights to Mark Ferrari's artwork, so I can't redistirbute it.
 Use the `download_images` script to get them directly from the canvascycle
 website.
+
+4. Why don't you support LBM images?
+
+I don't have any. Feel free to send me any good ones to tempt me to write an
+LBM loader.
