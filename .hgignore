@@ -2,7 +2,7 @@
 \.d$
 \.swp$
 ^images/
-^ccimg$
+^colcycle$
 \.OBJ$
 \.EXE$
 \.LNK$

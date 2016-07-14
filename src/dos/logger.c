@@ -2,7 +2,7 @@
 #include <stdarg.h>
 #include "logger.h"
 
-#define LOGFNAME	"ccimg.log"
+#define LOGFNAME	"colcycle.log"
 
 static FILE *logfile;
 

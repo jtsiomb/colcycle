@@ -1,5 +1,5 @@
-ccimg - color cycling image viewer
-==================================
+colcycle - color cycling image viewer
+=====================================
 
 About
 -----
@@ -27,3 +27,12 @@ On UNIX, make sure you have SDL 1.2 installed, and type `make`.
 On DOS you need the Watcom C compiler (OpenWatcom should do, although I've only
 tested Watcom 11.0c). Copy DOS4GW.EXE to the project directory, and type `wmake`
 to build.
+
+Run instructions
+----------------
+Just pass the image you want to view as a command-line argument to `colcycle`.
+If you pass a directory name as an argument, the program will cycle through all
+images in that directory, showing each one for a few seconds.
+
+For the SDL version, you may set the environment variable `FULLSCREEN` to 0, if
+you with to run in a window.

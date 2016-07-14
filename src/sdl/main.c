@@ -9,11 +9,11 @@ static int quit;
 int main(int argc, char **argv)
 {
 	unsigned long start_msec;
-	unsigned int sdl_flags = SDL_HWPALETTE | SDL_HWSURFACE;
+	unsigned int sdl_flags = SDL_HWPALETTE | SDL_HWSURFACE | SDL_FULLSCREEN;
 
 	char *env = getenv("FULLSCREEN");
-	if(env && atoi(env)) {
-		sdl_flags |= SDL_FULLSCREEN;
+	if(env && !atoi(env)) {
+		sdl_flags &= ~SDL_FULLSCREEN;
 	}
 
 	if(SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER) == -1) {
@@ -25,7 +25,7 @@ int main(int argc, char **argv)
 		SDL_Quit();
 		return 1;
 	}
-	SDL_WM_SetCaption("ccimg", 0);
+	SDL_WM_SetCaption("colcycle", 0);
 
 	SDL_LockSurface(fbsurf);
 	fbwidth = fbsurf->w;
@@ -38,6 +38,8 @@ int main(int argc, char **argv)
 	}
 	SDL_UnlockSurface(fbsurf);
 	SDL_UpdateRect(fbsurf, 0, 0, 0, 0);
+
+	SDL_ShowCursor(0);
 
 	start_msec = SDL_GetTicks();
 
@@ -76,6 +78,7 @@ int main(int argc, char **argv)
 
 break_evloop:
 	app_cleanup();
+	SDL_ShowCursor(1);
 	SDL_Quit();
 	return 0;
 }
