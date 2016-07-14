@@ -9,12 +9,18 @@ static int quit;
 int main(int argc, char **argv)
 {
 	unsigned long start_msec;
+	unsigned int sdl_flags = SDL_HWPALETTE | SDL_HWSURFACE;
+
+	char *env = getenv("FULLSCREEN");
+	if(env && atoi(env)) {
+		sdl_flags |= SDL_FULLSCREEN;
+	}
 
 	if(SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER) == -1) {
 		fprintf(stderr, "failed to initialize SDL\n");
 		return 1;
 	}
-	if(!(fbsurf = SDL_SetVideoMode(640, 480, 8, SDL_HWPALETTE | SDL_HWSURFACE))) {
+	if(!(fbsurf = SDL_SetVideoMode(640, 480, 8, sdl_flags))) {
 		fprintf(stderr, "failed to set video mode\n");
 		SDL_Quit();
 		return 1;
