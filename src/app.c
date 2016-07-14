@@ -7,6 +7,10 @@
 #define M_PI 3.141593
 #endif
 
+int fbwidth, fbheight;
+unsigned char *fbpixels;
+unsigned long time_msec;
+
 static struct image img;
 static int blend = 1;
 

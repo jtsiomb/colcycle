@@ -1,4 +1,4 @@
-obj = main.obj app.obj image.obj# timer.obj keyb.obj vbe.obj gfx.obj
+obj = main.obj app.obj image.obj timer.obj keyb.obj vbe.obj dpmi.obj gfx.obj logger.obj
 bin = ccimg.exe
 
 opt = -5 -fp5 -otexan

@@ -1,9 +1,9 @@
 #ifndef APP_H_
 #define APP_H_
 
-int fbwidth, fbheight;
-unsigned char *fbpixels;
-unsigned long time_msec;
+extern int fbwidth, fbheight;
+extern unsigned char *fbpixels;
+extern unsigned long time_msec;
 
 int app_init(int argc, char **argv);
 void app_cleanup(void);

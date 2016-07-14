@@ -1,0 +1,13 @@
+#!/bin/sh
+
+names='V08AM V29 V19 V26SNOW V08RAIN V14 V30 V04 V07 V20 V05RAIN V08PM
+V16RAIN V19AURA CORAL V15 V30RAIN V02 V28 V29PM V16 V01 V09 V16PM V08
+V03 V05HAUNT V10 V11AM V13 V17 V19PM V25HEAT V27 V29FOG'
+
+mkdir -p images && cd images
+
+for i in $names; do
+	url="http://www.effectgames.com/demos/canvascycle/image.php?file=${i}&callback=CanvasCycle.processImage"
+	out=$(echo $i | tr '[:upper:]' '[:lower:]').js
+	wget -O $out $url
+done
