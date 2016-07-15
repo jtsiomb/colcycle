@@ -22,28 +22,39 @@ for details.
 
 Build instructions
 ------------------
-On UNIX, make sure you have SDL 1.2 installed, and type `make`.
-
 On DOS you need the Watcom C compiler (OpenWatcom should do, although I've only
 tested Watcom 11.0c). Copy DOS4GW.EXE to the project directory, and type `wmake`
 to build.
 
+On UNIX you have the option of building with the OpenGL backend, or the SDL
+backend:
+
+ * On modern computers with properly installed GPU drivers, the OpenGL backend
+   should be significantly faster, which is why it's the default build option
+   when you just type `make`. You may need to install GLUT, and GLEW first if
+   you don't already have them.
+
+ * If you're on an older computer without a modern graphics card, make sure you
+   have SDL 1.2 installed, and type `make BACKEND=sdl`.
+
 Run instructions
 ----------------
 Just pass the image you want to view as a command-line argument to `colcycle`.
+
 If you pass a directory name as an argument, the program will cycle through all
 images in that directory, showing each one for a few seconds.
 
-For the SDL version, you may set the environment variable `FULLSCREEN` to 0, if
-you wish to run in a window.
+For the OpenGL or the SDL version, you may set the environment variable
+`FULLSCREEN` to 1, if you wish to run fullscreen. Also hitting 'f' while the
+program runs toggles fullscreen mode.
 
 FAQ
 ---
 1. Why DOS?
 
   The whole point of all this was to use Mark Ferrari's awesome color cycling
-  images as a screensaver on my dos machine. The SDL backend is just there for
-  ease of development, so that I can write most of the code on GNU/Linux.
+  images as a screensaver on my dos machine. The GL/SDL backend is just there
+  for ease of development, so that I can write most of the code on GNU/Linux.
 
 2. Where can I find `DOS4GW.EXE`?
 
