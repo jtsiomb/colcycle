@@ -11,6 +11,13 @@ I do not have access to the original LBM files, so I've written a parser for the
 converted JSON images used in the `canvascycle` web viewer. Use the included
 `download_images` script to grab all of them directly from there (uses `wget`).
 
+Download
+--------
+Latest release (1.2):
+https://github.com/jtsiomb/colcycle/releases/download/v1.2/colcycle-1.2.tar.gz
+
+Source (git repo): git@github.com:jtsiomb/colcycle.git
+
 License
 -------
 Copyright (C) 2016 John Tsiombikas <nuclear@member.fsf.org>
@@ -36,6 +43,11 @@ backend:
 
  * If you're on an older computer without a modern graphics card, make sure you
    have SDL 1.2 installed, and type `make BACKEND=sdl`.
+
+To cross-compile the windows version, set the CC variable to point to the mingw
+cross-compiler when invoking make, like so: `make CC=i686-w64-mingw32-gcc`.
+While there is currently no provision for building directly on windows, that
+can be done with minimal modifications to the makefile.
 
 Run instructions
 ----------------
