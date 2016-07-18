@@ -5,7 +5,7 @@ opt = -5 -fp5 -otexan
 dbg = -d1
 
 CC = wcc386
-CFLAGS = $(dbg) $(opt) -zq -bt=dos -Isrc
+CFLAGS = $(dbg) $(opt) -zq -bt=dos -Isrc -Isrc\dos
 LD = wlink
 
 $(bin): $(obj)

@@ -46,7 +46,7 @@ int gen_test_image(struct image *img)
 	img->num_ranges = 1;
 	img->range[0].low = 0;
 	img->range[0].high = 255;
-	img->range[0].rev = 1;
+	img->range[0].cmode = CYCLE_NORMAL;
 	img->range[0].rate = 5000;
 
 	if(!(img->pixels = malloc(img->width * img->height))) {
@@ -271,7 +271,7 @@ static int crange(FILE *fp, struct colrange *rng)
 		val = atoi(token);
 
 		if(strcmp(name, "reverse") == 0) {
-			rng->rev = val;
+			rng->cmode = val;
 		} else if(strcmp(name, "rate") == 0) {
 			rng->rate = val;
 		} else if(strcmp(name, "low") == 0) {

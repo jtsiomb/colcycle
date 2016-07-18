@@ -21,13 +21,21 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <math.h>
 #include <errno.h>
 #ifdef __WATCOMC__
+#include "inttypes.h"
 #include <direct.h>
 #else
+#include <inttypes.h>
 #include <dirent.h>
 #endif
 #include <sys/stat.h>
 #include "app.h"
 #include "image.h"
+
+/* define this if the assembly 32->64bit multiplication in cycle_offset doesn't
+ * work for you for some reason, and you wish to compile the floating point
+ * version of the time calculation.
+ */
+#undef USE_FLOAT
 
 #ifndef M_PI
 #define M_PI 3.141593
@@ -123,8 +131,6 @@ void app_cleanup(void)
 	}
 }
 
-#define LERP(a, b, t)	((a) + ((b) - (a)) * (t))
-
 /* tx is fixed point with 10 bits decimal */
 static void palfade(int dir, long tx)
 {
@@ -144,6 +150,110 @@ static void palfade(int dir, long tx)
 	}
 }
 
+
+/* modes:
+ *  1. normal
+ *  2. reverse
+ *  3. ping-pong
+ *  4. sine -> [0, rsize/2]
+ *  5. sine -> [0, rsize]
+ *
+ * returns: offset in 24.8 fixed point
+ */
+#ifdef USE_FLOAT
+static int32_t cycle_offset(enum cycle_mode mode, int32_t rate, int32_t rsize, int32_t msec)
+{
+	float offs;
+	float tm = (rate / 280.0) * (float)msec / 1000.0;
+
+	switch(mode) {
+	case CYCLE_PINGPONG:
+		offs = fmod(tm, (float)(rsize * 2));
+		if(offs >= rsize) offs = (rsize * 2) - offs;
+		break;
+
+	case CYCLE_SINE:
+	case CYCLE_SINE_HALF:
+		{
+			float x = fmod(tm, (float)rsize);
+			offs = sin((x * M_PI * 2.0) / (float)rsize) + 1.0;
+			offs *= rsize / (mode == CYCLE_SINE_HALF ? 4.0f : 2.0f);
+		}
+		break;
+
+	default:	/* normal or reverse */
+		offs = tm;
+	}
+	return (int32_t)(offs * 256.0);
+}
+
+#else	/* fixed point variant for specific platforms (currently x86) */
+
+#ifdef __GNUC__
+#define CALC_TIME(res, anim_rate, time_msec) \
+	asm volatile ( \
+		"\n\tmull %1"	/* edx:eax <- eax(rate << 8) * msec */ \
+		"\n\tmovl $280000, %%ebx" \
+		"\n\tdivl %%ebx"	/* eax <- edx:eax / ebx */ \
+		: "=a" (res) \
+		: "g" ((uint32_t)(time_msec)), "a" ((anim_rate) << 8) \
+		: "ebx", "edx" )
+#endif	/* __GNUC__ */
+
+#ifdef __WATCOMC__
+#define CALC_TIME(res, anim_rate, time_msec) \
+	(res) = calc_time_offset(anim_rate, time_msec)
+
+int32_t calc_time_offset(int32_t anim_rate, int32_t time_msec);
+#pragma aux calc_time_offset = \
+		"shl eax, 8" /* eax(rate) <<= 8 convert to 24.8 fixed point */ \
+		"mul ebx"	/* edx:eax <- eax(rate<<8) * ebx(msec) */ \
+		"mov ebx, 280000" \
+		"div ebx"	/* eax <- edx:eax / ebx */ \
+		modify [eax ebx ecx] \
+		value [eax] \
+		parm [eax] [ebx];
+#endif	/* __WATCOMC__ */
+
+static int32_t cycle_offset(enum cycle_mode mode, int32_t rate, int32_t rsize, int32_t msec)
+{
+	int32_t offs, tm;
+
+	CALC_TIME(tm, rate, msec);
+
+	switch(mode) {
+	case CYCLE_PINGPONG:
+		rsize <<= 8;	/* rsize -> 24.8 fixed point */
+		offs = tm % (rsize * 2);
+		if(offs > rsize) offs = (rsize * 2) - offs;
+		rsize >>= 8;	/* back to 32.0 */
+		break;
+
+	case CYCLE_SINE:
+	case CYCLE_SINE_HALF:
+		{
+			float t = (float)tm / 256.0;	/* convert fixed24.8 -> float */
+			float x = fmod(t, (float)(rsize * 2));
+			float foffs = sin((x * M_PI * 2.0) / (float)rsize) + 1.0;
+			if(mode == CYCLE_SINE_HALF) {
+				foffs *= rsize / 4.0;
+			} else {
+				foffs *= rsize / 2.0;
+			}
+			offs = (int32_t)(foffs * 256.0);	/* convert float -> fixed24.8 */
+		}
+		break;
+
+	default:	/* normal or reverse */
+		offs = tm;
+	}
+
+	return offs;
+}
+#endif	/* USE_FLOAT */
+
+#define LERP_FIXED_T(a, b, xt) ((((a) << 8) + ((b) - (a)) * (xt)) >> 8)
+
 void app_draw(void)
 {
 	int i, j;
@@ -151,6 +261,7 @@ void app_draw(void)
 	if(!img) return;
 
 	if(sslist) {
+		/* if there is a slideshow list of images, handle switching with fades between them */
 		if(!fade_dir && (change_pending || time_msec - showing_since > show_time)) {
 			fade_dir = -1;
 			fade_start = time_msec;
@@ -186,36 +297,20 @@ void app_draw(void)
 		}
 	}
 
+	/* for each cycling range in the image ... */
 	for(i=0; i<img->num_ranges; i++) {
-		int rev, rsize, ioffs;
-		float offs, tm;
+		int32_t offs, rsize, ioffs;
+		int rev;
 
 		if(!img->range[i].rate) continue;
-		rev = img->range[i].rev;
 		rsize = img->range[i].high - img->range[i].low + 1;
 
-		/* TODO rewrite this block -------------------- */
-		tm = (float)time_msec / (1000.0 / (img->range[i].rate / 280.0));
+		offs = cycle_offset(img->range[i].cmode, img->range[i].rate, rsize, time_msec);
 
-		if(rev < 3) {
-			offs = fmod(tm, (float)rsize);
-		} else if(rev == 3) {	/* ping-pong */
-			offs = fmod(tm, (float)(rsize * 2));
-			if(offs >= rsize) offs = (rsize * 2) - offs;
-		} else if(rev < 6) {	/* sine */
-			float x = fmod(tm, (float)rsize);
-			offs = sin((x * M_PI * 2.0) / (float)rsize) + 1.0;
-			if(rev == 4) {
-				offs *= rsize / 4;
-			} else {
-				offs *= rsize / 2;
-			}
-		}
-		ioffs = (int)floor(offs);
+		ioffs = (offs >> 8) % rsize;
 
 		/* reverse when rev is 2 */
-		rev = rev == 2 ? 1 : 0;
-		/* -------------------------------------------- */
+		rev = img->range[i].cmode == CYCLE_REVERSE ? 1 : 0;
 
 		for(j=0; j<rsize; j++) {
 			int pidx, to, next;
@@ -236,16 +331,16 @@ void app_draw(void)
 			to += img->range[i].low;
 
 			if(blend) {
-				float t, r, g, b;
+				int r, g, b;
+				int32_t frac_offs = offs & 0xff;
 
 				next += img->range[i].low;
 
-				t = offs - (int)offs;
-				r = LERP(img->palette[to].r, img->palette[next].r, t);
-				g = LERP(img->palette[to].g, img->palette[next].g, t);
-				b = LERP(img->palette[to].b, img->palette[next].b, t);
+				r = LERP_FIXED_T(img->palette[to].r, img->palette[next].r, frac_offs);
+				g = LERP_FIXED_T(img->palette[to].g, img->palette[next].g, frac_offs);
+				b = LERP_FIXED_T(img->palette[to].b, img->palette[next].b, frac_offs);
 
-				set_palette(pidx, (int)r, (int)g, (int)b);
+				set_palette(pidx, r, g, b);
 			} else {
 				set_palette(pidx, img->palette[to].r, img->palette[to].g, img->palette[to].b);
 			}

@@ -18,13 +18,22 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef IMAGE_H_
 #define IMAGE_H_
 
+enum cycle_mode {
+	CYCLE_NORMAL = 0,
+	CYCLE_UNUSED,	/* ? */
+	CYCLE_REVERSE = 2,
+	CYCLE_PINGPONG = 3,
+	CYCLE_SINE_HALF = 4,	/* sine -> [0, range/2] */
+	CYCLE_SINE = 5			/* sine -> [0, range] */
+};
+
 struct color {
 	unsigned char r, g, b;
 };
 
 struct colrange {
 	int low, high;
-	int rev;
+	int cmode;
 	unsigned int rate;
 	struct colrange *next;
 };
