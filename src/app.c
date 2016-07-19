@@ -55,6 +55,7 @@ static int load_slide(void);
 int fbwidth, fbheight;
 unsigned char *fbpixels;
 unsigned long time_msec;
+unsigned long nframes;
 
 static struct image *img;
 static int blend = 1;
@@ -112,6 +113,11 @@ int app_init(int argc, char **argv)
 
 void app_cleanup(void)
 {
+	if(time_msec) {
+		float fps = (float)nframes / ((float)time_msec / 1000.0f);
+		printf("average framerate: %.1f\n", fps);
+	}
+
 	if(sslist) {
 		struct ss_node *start = sslist;
 		sslist = sslist->next;
@@ -346,6 +352,7 @@ void app_draw(void)
 			}
 		}
 	}
+	++nframes;
 }
 
 void app_keyboard(int key, int state)

@@ -59,7 +59,7 @@ void *set_video_mode(int xsz, int ysz, int bpp)
 
 		printlog("Graphics adapter: %s, %s (%s)\n", VBEPTR(vbe_info->oem_vendor_name_ptr),
 				VBEPTR(vbe_info->oem_product_name_ptr), VBEPTR(vbe_info->oem_product_rev_ptr));
-		printlog("Video memory: %dmb\n", vbe_info->total_mem << 6);
+		printlog("Video memory: %dkb\n", vbe_info->total_mem << 6);
 
 		modes = VBEPTR(vbe_info->vid_mode_ptr);
 	}

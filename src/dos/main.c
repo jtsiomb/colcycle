@@ -53,8 +53,8 @@ int main(int argc, char **argv)
 	}
 
 break_evloop:
-	app_cleanup();
 	set_text_mode();
+	app_cleanup();
 	kb_shutdown();
 	return 0;
 }

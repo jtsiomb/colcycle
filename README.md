@@ -10,11 +10,13 @@ web-based viewer by Joseph Huckaby: http://www.effectgames.com/demos/canvascycle
 I do not have access to the original LBM files, so I've written a parser for the
 converted JSON images used in the `canvascycle` web viewer. Use the included
 `download_images` script to grab all of them directly from there (uses `wget`).
+Alternatively, to download them manually, follow instructions in the wiki:
+https://github.com/jtsiomb/colcycle/wiki
 
 Download
 --------
-Latest release (1.2):
-https://github.com/jtsiomb/colcycle/releases/download/v1.2/colcycle-1.2.tar.gz
+Latest release (1.3):
+https://github.com/jtsiomb/colcycle/releases/download/v1.3/colcycle-1.3.tar.gz
 
 Source (git repo): git@github.com:jtsiomb/colcycle.git
 
