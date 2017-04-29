@@ -1,6 +1,6 @@
 /*
 colcycle - color cycling image viewer
-Copyright (C) 2016  John Tsiombikas <nuclear@member.fsf.org>
+Copyright (C) 2016-2017  John Tsiombikas <nuclear@member.fsf.org>
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -27,6 +27,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <alloca.h>
 #endif
 #include "image.h"
+#include "image_lbm.h"
 
 #ifndef M_PI
 #define M_PI 3.141593
@@ -88,6 +89,12 @@ int load_image(struct image *img, const char *fname)
 	if(!(fp = fopen(fname, "rb"))) {
 		fprintf(stderr, "failed to open file: %s: %s\n", fname, strerror(errno));
 		return -1;
+	}
+
+	if(file_is_ilbm(fp)) {
+		int res = load_image_ilbm(img, fp);
+		fclose(fp);
+		return res;
 	}
 
 	/* find the start of the root block */
