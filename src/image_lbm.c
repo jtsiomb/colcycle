@@ -1,4 +1,6 @@
 #include <stdio.h>
+#include <stdlib.h>
+#include <assert.h>
 #include <stdint.h>
 #include <string.h>
 #include <alloca.h>
@@ -13,13 +15,8 @@
 #define BENDIAN
 #endif
 
-#ifdef BENDIAN
 #define CHUNKID(s)	(((uint32_t)(s)[0] << 24) | ((uint32_t)(s)[1] << 16) | \
 		((uint32_t)(s)[2] << 8) | (uint32_t)(s)[3])
-#else	/* LENDIAN */
-#define CHUNKID(s)	(((uint32_t)(s)[3] << 24) | ((uint32_t)(s)[2] << 16) | \
-		((uint32_t)(s)[1] << 8) | (uint32_t)(s)[0])
-#endif
 
 #define IS_IFF_CONTAINER(id) \
 	((id) == CHUNKID("FORM") || (id) == CHUNKID("CAT") || (id) == CHUNKID("LIST"))
@@ -52,6 +49,7 @@ enum {
 static int read_header(FILE *fp, struct chdr *hdr);
 static int read_ilbm(FILE *fp, int ilbm_size, struct image *img);
 static int read_bmhd(FILE *fp, struct bitmap_header *bmhd);
+static int read_body(FILE *fp, struct bitmap_header *bmhd, struct image *img);
 static inline uint16_t swap16(uint16_t x);
 static inline uint32_t swap32(uint32_t x);
 
@@ -74,6 +72,16 @@ int file_is_ilbm(FILE *fp)
 		fseek(fp, hdr.size, SEEK_CUR);
 	}
 	return 0;
+}
+
+void print_chunkid(uint32_t id)
+{
+	char str[5] = {0};
+#ifdef LENDIAN
+	id = swap32(id);
+#endif
+	memcpy(str, &id, 4);
+	puts(str);
 }
 
 int load_image_ilbm(struct image *img, FILE *fp)
@@ -129,7 +137,7 @@ static int read_ilbm(FILE *fp, int ilbm_size, struct image *img)
 			}
 			img->width = bmhd.width;
 			img->height = bmhd.height;
-			if(bmhd.num_planes != 8) {
+			if(bmhd.nplanes != 8) {
 				fprintf(stderr, "only 256-color ILBM files supported\n");
 				return -1;
 			}
@@ -162,7 +170,7 @@ static int read_ilbm(FILE *fp, int ilbm_size, struct image *img)
 				fprintf(stderr, "malformed ILBM image: encountered BODY chunk before BMHD\n");
 				return -1;
 			}
-			if(read_body(fp, &bmhd, img->pixels) == -1) {
+			if(read_body(fp, &bmhd, img) == -1) {
 				fprintf(stderr, "failed to read pixel data\n");
 				return -1;
 			}
@@ -180,7 +188,7 @@ static int read_ilbm(FILE *fp, int ilbm_size, struct image *img)
 
 static int read_bmhd(FILE *fp, struct bitmap_header *bmhd)
 {
-	if(fread(bmhd sizeof *bmhd, 1, fp) < 1) {
+	if(fread(bmhd, sizeof *bmhd, 1, fp) < 1) {
 		return -1;
 	}
 #ifdef LENDIAN
@@ -218,6 +226,7 @@ static int read_body(FILE *fp, struct bitmap_header *bmhd, struct image *img)
 		}
 
 		/* reorder planes to make the scanline linear */
+		npix = 0;
 		for(j=0; j<img->width; j++) {
 			unsigned char pixel = 0;
 
@@ -225,7 +234,7 @@ static int read_body(FILE *fp, struct bitmap_header *bmhd, struct image *img)
 				pixel |= ((scanbuf[k] >> npix) & 1) << k;
 			}
 			*dest++ = pixel;
-			scanbuf += bmhd->planes;
+			scanbuf += bmhd->nplanes;
 			npix = (npix + 1) & 7;	/* 8 planes, see assert above */
 		}
 	}

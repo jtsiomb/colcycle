@@ -8,7 +8,7 @@ src = $(wildcard src/*.c) $(wildcard src/$(BACKEND)/*.c)
 obj = $(src:.c=.o)
 bin = colcycle
 
-CFLAGS = -pedantic -Wall -g -O3 -D__FUNCTION__=__func__ -ffast-math -Isrc $(CFLAGS_$(BACKEND))
+CFLAGS = -pedantic -Wall -g -D__FUNCTION__=__func__ -ffast-math -Isrc $(CFLAGS_$(BACKEND))
 LDFLAGS = -lm $(LDFLAGS_$(BACKEND))
 
 CFLAGS_sdl = `pkg-config --cflags sdl`
