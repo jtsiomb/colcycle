@@ -306,10 +306,10 @@ static int read_crng(FILE *fp, struct crng *crng)
 
 static int read_body_ilbm(FILE *fp, struct bitmap_header *bmhd, struct image *img)
 {
-	int i, j, k, npix;
-	unsigned char *dest = img->pixels;
+	int i, j, k, bitidx;
+	unsigned char *src, *dest = img->pixels;
 	unsigned char *scanbuf = alloca(img->width);
-	int scansz = img->width * 8 / bmhd->nplanes;
+	int scansz = img->width * bmhd->nplanes / 8;
 
 	assert(bmhd->width == img->width);
 	assert(bmhd->height == img->height);
@@ -334,16 +334,22 @@ static int read_body_ilbm(FILE *fp, struct bitmap_header *bmhd, struct image *im
 		}
 
 		/* reorder planes to make the scanline linear */
-		npix = 0;
-		for(j=0; j<img->width; j++) {
-			unsigned char pixel = 0;
+		memset(dest, 0, img->width);	/* clear the whole scanline to OR bits into place */
 
-			for(k=0; k<bmhd->nplanes; k++) {
-				pixel |= ((scanbuf[k] >> npix) & 1) << k;
+		bitidx = 0;
+		src = scanbuf;
+
+		for(j=0; j<scansz; j++) {
+			unsigned char s = *src++;
+
+			for(k=0; k<8; k++) {
+				dest[k] |= ((s >> (7 - k)) & 1) << bitidx;
 			}
-			*dest++ = pixel;
-			scanbuf += bmhd->nplanes;
-			npix = (npix + 1) % bmhd->nplanes;
+
+			if(++bitidx >= bmhd->nplanes) {
+				bitidx = 0;
+				dest += 8;
+			}
 		}
 	}
 	return 0;
