@@ -7,11 +7,15 @@ This is a small program which can be used to view the excellent color cycling
 pictures of Mark J. Ferrari (http://markferrari.com), showcased in this
 web-based viewer by Joseph Huckaby: http://www.effectgames.com/demos/canvascycle
 
-I do not have access to the original LBM files, so I've written a parser for the
+I did not have access to the original LBM files, so I've written a parser for the
 converted JSON images used in the `canvascycle` web viewer. Use the included
 `download_images` script to grab all of them directly from there (uses `wget`).
 Alternatively, to download them manually, follow instructions in the wiki:
 https://github.com/jtsiomb/colcycle/wiki
+
+Git version is now able to load a subset of LBM images which happens to contain
+Mark Ferrari's LBM files available here:
+http://www.randelshofer.ch/animations/anims_ibm/mark_j_ferrari/thu_mark_j_ferrari.html
 
 Download
 --------
@@ -22,7 +26,7 @@ Source (git repo): git@github.com:jtsiomb/colcycle.git
 
 License
 -------
-Copyright (C) 2016 John Tsiombikas <nuclear@member.fsf.org>
+Copyright (C) 2016-2017 John Tsiombikas <nuclear@member.fsf.org>
 
 This program is free software; feel free to use it, modify and/or redistribute
 it, under the terms of the GNU General Public License version 3, or at your
@@ -82,8 +86,3 @@ FAQ
   I don't own the rights to Mark Ferrari's artwork, so I can't redistirbute it.
   Use the `download_images` script to get them directly from the `canvascycle`
   website, or download them manually: https://github.com/jtsiomb/colcycle/wiki
-
-4. Why don't you support LBM images?
-
-  I don't have any. Feel free to send me any good ones to tempt me to write an
-  LBM loader.
