@@ -93,8 +93,8 @@ int load_image(struct image *img, const char *fname)
 		return -1;
 	}
 
-	if(file_is_ilbm(fp)) {
-		if(load_image_ilbm(img, fp) == -1) {
+	if(file_is_lbm(fp)) {
+		if(load_image_lbm(img, fp) == -1) {
 			fclose(fp);
 			return -1;
 		}

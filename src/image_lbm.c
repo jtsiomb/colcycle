@@ -97,7 +97,7 @@ static int read32(FILE *fp, uint32_t *res);
 static inline uint16_t swap16(uint16_t x);
 static inline uint32_t swap32(uint32_t x);
 
-int file_is_ilbm(FILE *fp)
+int file_is_lbm(FILE *fp)
 {
 	uint32_t type;
 	struct chdr hdr;
@@ -130,7 +130,7 @@ void print_chunkid(uint32_t id)
 	puts(str);
 }
 
-int load_image_ilbm(struct image *img, FILE *fp)
+int load_image_lbm(struct image *img, FILE *fp)
 {
 	uint32_t type;
 	struct chdr hdr;
@@ -194,8 +194,8 @@ static int read_ilbm_pbm(FILE *fp, uint32_t type, uint32_t size, struct image *i
 			}
 			img->width = bmhd.width;
 			img->height = bmhd.height;
-			if(bmhd.nplanes != 8) {
-				fprintf(stderr, "only 256-color ILBM files supported\n");
+			if(bmhd.nplanes > 8) {
+				fprintf(stderr, "%d planes found, only paletized LBM files supported\n", bmhd.nplanes);
 				return -1;
 			}
 			if(!(img->pixels = malloc(img->width * img->height))) {
@@ -309,17 +309,24 @@ static int read_body_ilbm(FILE *fp, struct bitmap_header *bmhd, struct image *im
 	int i, j, k, npix;
 	unsigned char *dest = img->pixels;
 	unsigned char *scanbuf = alloca(img->width);
+	int scansz = img->width * 8 / bmhd->nplanes;
 
 	assert(bmhd->width == img->width);
 	assert(bmhd->height == img->height);
 	assert(img->pixels);
-	assert(bmhd->nplanes = 8);
 
-	/* TODO handle compression */
+	printf("reading %s ilbm with %d planes\n",
+			bmhd->compression ? "compressed" : "raw", (int)bmhd->nplanes);
+
 	for(i=0; i<img->height; i++) {
-		/* read a scanline */
-		if(fread(scanbuf, 1, img->width, fp) < img->width) {
-			return -1;
+		if(bmhd->compression) {
+			if(read_compressed_scanline(fp, scanbuf, scansz) == -1) {
+				return -1;
+			}
+		} else {
+			if(fread(scanbuf, 1, scansz, fp) < scansz) {
+				return -1;
+			}
 		}
 		if(bmhd->masking & MASK_PLANE) {
 			/* skip the mask (1bpp) */
@@ -336,7 +343,7 @@ static int read_body_ilbm(FILE *fp, struct bitmap_header *bmhd, struct image *im
 			}
 			*dest++ = pixel;
 			scanbuf += bmhd->nplanes;
-			npix = (npix + 1) & 7;	/* 8 planes, see assert above */
+			npix = (npix + 1) % bmhd->nplanes;
 		}
 	}
 	return 0;

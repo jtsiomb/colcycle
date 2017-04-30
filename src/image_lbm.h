@@ -15,13 +15,13 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef IMAGE_ILBM_H_
-#define IMAGE_ILBM_H_
+#ifndef IMAGE_LBM_H_
+#define IMAGE_LBM_H_
 
 #include <stdio.h>
 #include "image.h"
 
-int file_is_ilbm(FILE *fp);
-int load_image_ilbm(struct image *img, FILE *fp);
+int file_is_lbm(FILE *fp);
+int load_image_lbm(struct image *img, FILE *fp);
 
-#endif	/* IMAGE_ILBM_H_ */
+#endif	/* IMAGE_LBM_H_ */
