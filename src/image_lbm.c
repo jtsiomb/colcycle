@@ -56,9 +56,22 @@ enum {
 	MASK_LASSO
 };
 
+struct crng {
+	uint16_t padding;
+	uint16_t rate;
+	uint16_t flags;
+	uint8_t low, high;
+};
+
+enum {
+	CRNG_ENABLE = 1,
+	CRNG_REVERSE = 2
+};
+
 static int read_header(FILE *fp, struct chdr *hdr);
 static int read_ilbm_pbm(FILE *fp, uint32_t type, uint32_t size, struct image *img);
 static int read_bmhd(FILE *fp, struct bitmap_header *bmhd);
+static int read_crng(FILE *fp, struct crng *crng);
 static int read_body_ilbm(FILE *fp, struct bitmap_header *bmhd, struct image *img);
 static int read_body_pbm(FILE *fp, struct bitmap_header *bmhd, struct image *img);
 static int read_compressed_scanline(FILE *fp, unsigned char *scanline, int width);
@@ -147,6 +160,8 @@ static int read_ilbm_pbm(FILE *fp, uint32_t type, uint32_t size, struct image *i
 	int i, res = -1;
 	struct chdr hdr;
 	struct bitmap_header bmhd;
+	struct crng crng;
+	struct colrange *crnode;
 	unsigned char pal[3 * 256];
 	unsigned char *pptr;
 	long start = ftell(fp);
@@ -187,6 +202,28 @@ static int read_ilbm_pbm(FILE *fp, uint32_t type, uint32_t size, struct image *i
 			}
 			break;
 
+		case IFF_CRNG:
+			assert(hdr.size == sizeof crng);
+
+			if(read_crng(fp, &crng) == -1) {
+				fprintf(stderr, "failed to read color cycling range chunk\n");
+				return -1;
+			}
+			if(crng.low != crng.high && crng.rate > 0) {
+				if(!(crnode = malloc(sizeof *crnode))) {
+					fprintf(stderr, "failed to allocate color range node\n");
+					return -1;
+				}
+				crnode->low = crng.low;
+				crnode->high = crng.high;
+				crnode->cmode = (crng.flags & CRNG_REVERSE) ? CYCLE_REVERSE : CYCLE_NORMAL;
+				crnode->rate = crng.rate;
+				crnode->next = img->range;
+				img->range = crnode;
+				++img->num_ranges;
+			}
+			break;
+
 		case IFF_BODY:
 			if(!img->pixels) {
 				fprintf(stderr, "malformed ILBM image: encountered BODY chunk before BMHD\n");
@@ -209,8 +246,6 @@ static int read_ilbm_pbm(FILE *fp, uint32_t type, uint32_t size, struct image *i
 
 		default:
 			/* skip unknown chunks */
-			printf("skipping %d, chunk: ", (int)hdr.size);
-			print_chunkid(hdr.id);
 			fseek(fp, hdr.size, SEEK_CUR);
 			if(ftell(fp) & 1) {
 				/* chunks must start at even offsets */
@@ -236,6 +271,18 @@ static int read_bmhd(FILE *fp, struct bitmap_header *bmhd)
 	bmhd->colorkey = swap16(bmhd->colorkey);
 	bmhd->pgwidth = swap16(bmhd->pgwidth);
 	bmhd->pgheight = swap16(bmhd->pgheight);
+#endif
+	return 0;
+}
+
+static int read_crng(FILE *fp, struct crng *crng)
+{
+	if(fread(crng, sizeof *crng, 1, fp) < 1) {
+		return -1;
+	}
+#ifdef LENDIAN
+	crng->rate = swap16(crng->rate);
+	crng->flags = swap16(crng->flags);
 #endif
 	return 0;
 }

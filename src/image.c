@@ -33,6 +33,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define M_PI 3.141593
 #endif
 
+static int flatten_crange_list(struct image *img);
+
 int gen_test_image(struct image *img)
 {
 	int i, j;
@@ -92,9 +94,13 @@ int load_image(struct image *img, const char *fname)
 	}
 
 	if(file_is_ilbm(fp)) {
-		int res = load_image_ilbm(img, fp);
+		if(load_image_ilbm(img, fp) == -1) {
+			fclose(fp);
+			return -1;
+		}
 		fclose(fp);
-		return res;
+		flatten_crange_list(img);
+		return 0;
 	}
 
 	/* find the start of the root block */
@@ -110,8 +116,9 @@ int load_image(struct image *img, const char *fname)
 		fclose(fp);
 		return -1;
 	}
-
 	fclose(fp);
+
+	flatten_crange_list(img);
 	return 0;
 }
 
@@ -122,6 +129,30 @@ void destroy_image(struct image *img)
 		free(img->range);
 		memset(img, 0, sizeof *img);
 	}
+}
+
+static int flatten_crange_list(struct image *img)
+{
+	struct colrange *list = img->range;
+	struct colrange *rptr;
+
+	if(img->num_ranges <= 0) {
+		return 0;
+	}
+
+	if(!(img->range = malloc(img->num_ranges * sizeof *img->range))) {
+		perror("flatten_crange_list: failed to allocate range array\n");
+		return -1;
+	}
+
+	rptr = img->range;
+	while(list) {
+		struct colrange *rng = list;
+		list = list->next;
+		*rptr++ = *rng;
+		free(rng);
+	}
+	return 0;
 }
 
 /* ---- parser ---- */
@@ -315,34 +346,24 @@ static int cycles(FILE *fp, struct image *img)
 			free(rng);
 			goto err;
 		}
-		rng->next = list;
-		list = rng;
-		++img->num_ranges;
+		if(rng->low != rng->high && rng->rate > 0) {
+			rng->next = list;
+			list = rng;
+			++img->num_ranges;
+		} else {
+			free(rng);
+		}
 
 		if(nextc == ',') {
 			next_token(fp);	/* eat the comma */
 		}
 	}
 
+	img->range = list;
+
 	if(!expect(fp, ']')) {
 		fprintf(stderr, "cycles: missing closing bracket\n");
 		goto err;
-	}
-
-	if(img->num_ranges) {
-		struct colrange *rptr;
-		if(!(img->range = malloc(img->num_ranges * sizeof *img->range))) {
-			perror("cycles: failed to allocate range array\n");
-			goto err;
-		}
-
-		rptr = img->range;
-		while(list) {
-			rng = list;
-			list = list->next;
-			*rptr++ = *rng;
-			free(rng);
-		}
 	}
 	return 0;
 
@@ -352,6 +373,7 @@ err:
 		list = list->next;
 		free(rng);
 	}
+	img->num_ranges = 0;
 	return -1;
 }
 
