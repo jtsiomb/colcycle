@@ -100,7 +100,7 @@ void app_quit(void)
 	exit(0);
 }
 
-void set_video_mode(int xsz, int ysz)
+void resize(int xsz, int ysz)
 {
 	if(xsz == fbwidth) return;
 

@@ -33,6 +33,6 @@ void app_keyboard(int key, int state);
 void app_quit(void);
 unsigned long get_msec(void);
 void set_palette(int idx, int r, int g, int b);
-void set_video_mode(int x, int y);
+void resize(int x, int y);
 
 #endif	/* APP_H_ */

@@ -37,6 +37,7 @@ static unsigned int make_mask(int sz, int pos);
 static struct vbe_info *vbe_info;
 static struct vbe_mode_info *mode_info;
 static int pal_bits = 6;
+static void *vmemptr;
 
 void *set_video_mode(int xsz, int ysz, int bpp)
 {
@@ -98,11 +99,19 @@ void *set_video_mode(int xsz, int ysz, int bpp)
 	*/
 
 	fbsize = xsz * ysz * mode_info->num_img_pages * (bpp / CHAR_BIT);
-	return (void*)dpmi_mmap(mode_info->fb_addr, fbsize);
+
+	if(vmemptr) {
+		dpmi_munmap(vmemptr);
+	}
+	vmemptr = (void*)dpmi_mmap(mode_info->fb_addr, fbsize);
+	return vmemptr;
 }
 
 int set_text_mode(void)
 {
+	if(vmemptr) {
+		dpmi_munmap(vmemptr);
+	}
 	vbe_set_mode(0x3);
 	return 0;
 }
