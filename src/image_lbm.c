@@ -86,6 +86,7 @@ int file_is_ilbm(FILE *fp)
 		}
 		fseek(fp, hdr.size, SEEK_CUR);
 	}
+	fseek(fp, 0, SEEK_SET);
 	return 0;
 }
 
