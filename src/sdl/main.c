@@ -118,7 +118,7 @@ void set_video_mode(int xsz, int ysz)
 		SDL_UnlockSurface(fbsurf);
 	}
 
-	fbsurf = SDL_SetVideoMode(xsz, 3 * xsz / 4);
+	fbsurf = SDL_SetVideoMode(xsz, ysz);
 	if(SDL_MUSTLOCK(fbsurf)) {
 		SDL_LockSurface(fbsurf);
 	}
