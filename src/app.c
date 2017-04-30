@@ -389,8 +389,11 @@ static void set_image_palette(struct image *img)
 static void show_image(struct image *img)
 {
 	int i, j;
-	unsigned char *dptr = fbpixels;
+	unsigned char *dptr;
 
+	set_video_mode(img->width, img->height);
+
+	dptr = fbpixels;
 	for(i=0; i<fbheight; i++) {
 		for(j=0; j<fbwidth; j++) {
 			unsigned char c = 0;

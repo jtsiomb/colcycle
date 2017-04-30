@@ -1,6 +1,6 @@
 /*
 colcycle - color cycling image viewer
-Copyright (C) 2016  John Tsiombikas <nuclear@member.fsf.org>
+Copyright (C) 2016-2017  John Tsiombikas <nuclear@member.fsf.org>
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -98,6 +98,20 @@ int main(int argc, char **argv)
 void app_quit(void)
 {
 	exit(0);
+}
+
+void set_video_mode(int xsz, int ysz)
+{
+	if(xsz == fbwidth) return;
+
+	fbwidth = xsz;
+	fbheight = ysz;
+
+	tex_xsz = next_pow2(fbwidth);
+	tex_ysz = next_pow2(fbheight);
+
+	glBindTexture(GL_TEXTURE_2D, img_tex);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE, tex_xsz, tex_ysz, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE, 0);
 }
 
 unsigned long get_msec(void)

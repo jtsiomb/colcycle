@@ -109,6 +109,24 @@ break_evloop:
 	return 0;
 }
 
+void set_video_mode(int xsz, int ysz)
+{
+	if(xsz == fbwidth) return;
+
+	/* this will be called from app_draw, so we must unlock the surface first */
+	if(SDL_MUSTLOCK(fbsurf)) {
+		SDL_UnlockSurface(fbsurf);
+	}
+
+	fbsurf = SDL_SetVideoMode(xsz, 3 * xsz / 4);
+	if(SDL_MUSTLOCK(fbsurf)) {
+		SDL_LockSurface(fbsurf);
+	}
+	fbwidth = fbsurf->w;
+	fbheight = fbsurf->h;
+	fbpixels = fbsurf->pixels;
+}
+
 unsigned long get_msec(void)
 {
 	return SDL_GetTicks() - start_msec;
