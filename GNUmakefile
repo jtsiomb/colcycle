@@ -8,7 +8,11 @@ src = $(wildcard src/*.c) $(wildcard src/$(BACKEND)/*.c)
 obj = $(src:.c=.o)
 bin = colcycle
 
-CFLAGS = -pedantic -Wall -g -D__FUNCTION__=__func__ -ffast-math -Isrc $(CFLAGS_$(BACKEND))
+warn = -pedantic -Wall -Wno-unused-function
+#opt = -O3 -ffast-math
+def = -D__FUNCTION__=__func__
+
+CFLAGS = -pedantic $(warn) $(opt) -g $(def) -Isrc $(CFLAGS_$(BACKEND))
 LDFLAGS = -lm $(LDFLAGS_$(BACKEND))
 
 CFLAGS_sdl = `pkg-config --cflags sdl`

@@ -15,11 +15,21 @@
 #define BENDIAN
 #endif
 
-#define CHUNKID(s)	(((uint32_t)(s)[0] << 24) | ((uint32_t)(s)[1] << 16) | \
-		((uint32_t)(s)[2] << 8) | (uint32_t)(s)[3])
+#define MKID(a, b, c, d)	(((a) << 24) | ((b) << 16) | ((c) << 8) | (d))
 
-#define IS_IFF_CONTAINER(id) \
-	((id) == CHUNKID("FORM") || (id) == CHUNKID("CAT") || (id) == CHUNKID("LIST"))
+#define IS_IFF_CONTAINER(id)	((id) == IFF_FORM || (id) == IFF_CAT || (id) == IFF_LIST)
+
+enum {
+	IFF_FORM = MKID('F', 'O', 'R', 'M'),
+	IFF_CAT = MKID('C', 'A', 'T', ' '),
+	IFF_LIST = MKID('L', 'I', 'S', 'T'),
+	IFF_ILBM = MKID('I', 'L', 'B', 'M'),
+	IFF_PBM = MKID('P', 'B', 'M', ' '),
+	IFF_BMHD = MKID('B', 'M', 'H', 'D'),
+	IFF_CMAP = MKID('C', 'M', 'A', 'P'),
+	IFF_BODY = MKID('B', 'O', 'D', 'Y'),
+	IFF_CRNG = MKID('C', 'R', 'N', 'G')
+};
 
 
 struct chdr {
@@ -47,27 +57,32 @@ enum {
 };
 
 static int read_header(FILE *fp, struct chdr *hdr);
-static int read_ilbm(FILE *fp, int ilbm_size, struct image *img);
+static int read_ilbm_pbm(FILE *fp, uint32_t type, uint32_t size, struct image *img);
 static int read_bmhd(FILE *fp, struct bitmap_header *bmhd);
-static int read_body(FILE *fp, struct bitmap_header *bmhd, struct image *img);
+static int read_body_ilbm(FILE *fp, struct bitmap_header *bmhd, struct image *img);
+static int read_body_pbm(FILE *fp, struct bitmap_header *bmhd, struct image *img);
+static int read_compressed_scanline(FILE *fp, unsigned char *scanline, int width);
+static int read16(FILE *fp, uint16_t *res);
+static int read32(FILE *fp, uint32_t *res);
 static inline uint16_t swap16(uint16_t x);
 static inline uint32_t swap32(uint32_t x);
 
 int file_is_ilbm(FILE *fp)
 {
-	int found_iff = 0;
+	uint32_t type;
 	struct chdr hdr;
 
 	while(read_header(fp, &hdr) != -1) {
 		if(IS_IFF_CONTAINER(hdr.id)) {
-			found_iff = 1;
-			continue;	/* skip seeking to read child chunk next iter */
-		}
-		if(!found_iff) break;	/* read at least one chunk and not found IFF container */
+			if(read32(fp, &type) == -1) {
+				break;
+			}
 
-		if(hdr.id == CHUNKID("ILBM")) {
-			rewind(fp);
-			return 1;
+			if(type == IFF_ILBM || type == IFF_PBM ) {
+				rewind(fp);
+				return 1;
+			}
+			hdr.size -= sizeof type;	/* so we will seek fwd correctly */
 		}
 		fseek(fp, hdr.size, SEEK_CUR);
 	}
@@ -86,21 +101,28 @@ void print_chunkid(uint32_t id)
 
 int load_image_ilbm(struct image *img, FILE *fp)
 {
-	int found_iff = 0;
+	uint32_t type;
 	struct chdr hdr;
 
 	while(read_header(fp, &hdr) != -1) {
 		if(IS_IFF_CONTAINER(hdr.id)) {
-			found_iff = 1;
-			continue;
-		}
-		if(!found_iff) return -1;
-
-		if(hdr.id == CHUNKID("ILBM")) {
-			if(read_ilbm(fp, hdr.size, img) == -1) {
-				return -1;
+			if(read32(fp, &type) == -1) {
+				break;
 			}
-			return 0;	/* TODO support multiple ILBM chunks */
+			hdr.size -= sizeof type;	/* to compensate for having advanced 4 more bytes */
+
+			if(type == IFF_ILBM) {
+				if(read_ilbm_pbm(fp, type, hdr.size, img) == -1) {
+					return -1;
+				}
+				return 0;
+			}
+			if(type == IFF_PBM) {
+				if(read_ilbm_pbm(fp, type, hdr.size, img) == -1) {
+					return -1;
+				}
+				return 0;
+			}
 		}
 		fseek(fp, hdr.size, SEEK_CUR);
 	}
@@ -119,18 +141,20 @@ static int read_header(FILE *fp, struct chdr *hdr)
 	return 0;
 }
 
-static int read_ilbm(FILE *fp, int ilbm_size, struct image *img)
+static int read_ilbm_pbm(FILE *fp, uint32_t type, uint32_t size, struct image *img)
 {
 	int i, res = -1;
 	struct chdr hdr;
 	struct bitmap_header bmhd;
 	unsigned char pal[3 * 256];
+	unsigned char *pptr;
 	long start = ftell(fp);
 
 	memset(img, 0, sizeof *img);
 
-	while(read_header(fp, &hdr) != -1 && ftell(fp) - start < ilbm_size) {
-		if(hdr.id == CHUNKID("BMHD")) {
+	while(read_header(fp, &hdr) != -1 && ftell(fp) - start < size) {
+		switch(hdr.id) {
+		case IFF_BMHD:
 			assert(hdr.size == 20);
 			if(read_bmhd(fp, &bmhd) == -1) {
 				return -1;
@@ -141,44 +165,56 @@ static int read_ilbm(FILE *fp, int ilbm_size, struct image *img)
 				fprintf(stderr, "only 256-color ILBM files supported\n");
 				return -1;
 			}
-			if(bmhd.compression) {
-				fprintf(stderr, "only uncompressed ILBM files supported\n");
-				return -1;
-			}
 			if(!(img->pixels = malloc(img->width * img->height))) {
 				fprintf(stderr, "failed to allocate %dx%d image\n", img->width, img->height);
 				return -1;
 			}
+			break;
 
-		} else if(hdr.id == CHUNKID("CMAP")) {
-			unsigned char *pptr = pal;
-
+		case IFF_CMAP:
 			assert(hdr.size / 3 <= 256);
 
 			if(fread(pal, 1, hdr.size, fp) < hdr.size) {
 				fprintf(stderr, "failed to read colormap\n");
 				return -1;
 			}
+			pptr = pal;
 			for(i=0; i<256; i++) {
 				img->palette[i].r = *pptr++;
 				img->palette[i].g = *pptr++;
 				img->palette[i].b = *pptr++;
 			}
+			break;
 
-		} else if(hdr.id == CHUNKID("BODY")) {
+		case IFF_BODY:
 			if(!img->pixels) {
 				fprintf(stderr, "malformed ILBM image: encountered BODY chunk before BMHD\n");
 				return -1;
 			}
-			if(read_body(fp, &bmhd, img) == -1) {
-				fprintf(stderr, "failed to read pixel data\n");
-				return -1;
+			if(type == IFF_ILBM) {
+				if(read_body_ilbm(fp, &bmhd, img) == -1) {
+					fprintf(stderr, "failed to read interleaved pixel data\n");
+					return -1;
+				}
+			} else {
+				assert(type == IFF_PBM);
+				if(read_body_pbm(fp, &bmhd, img) == -1) {
+					fprintf(stderr, "failed to read linear pixel data\n");
+					return -1;
+				}
 			}
 			res = 0;	/* sucessfully read image */
+			break;
 
-		} else {
+		default:
 			/* skip unknown chunks */
+			printf("skipping %d, chunk: ", (int)hdr.size);
+			print_chunkid(hdr.id);
 			fseek(fp, hdr.size, SEEK_CUR);
+			if(ftell(fp) & 1) {
+				/* chunks must start at even offsets */
+				fseek(fp, 1, SEEK_CUR);
+			}
 		}
 	}
 
@@ -203,7 +239,7 @@ static int read_bmhd(FILE *fp, struct bitmap_header *bmhd)
 	return 0;
 }
 
-static int read_body(FILE *fp, struct bitmap_header *bmhd, struct image *img)
+static int read_body_ilbm(FILE *fp, struct bitmap_header *bmhd, struct image *img)
 {
 	int i, j, k, npix;
 	unsigned char *dest = img->pixels;
@@ -238,6 +274,87 @@ static int read_body(FILE *fp, struct bitmap_header *bmhd, struct image *img)
 			npix = (npix + 1) & 7;	/* 8 planes, see assert above */
 		}
 	}
+	return 0;
+}
+
+static int read_body_pbm(FILE *fp, struct bitmap_header *bmhd, struct image *img)
+{
+	int i;
+	int npixels = img->width * img->height;
+	unsigned char *dptr = img->pixels;
+
+	assert(bmhd->width == img->width);
+	assert(bmhd->height == img->height);
+	assert(img->pixels);
+	assert(bmhd->nplanes = 1);
+
+	if(bmhd->compression) {
+		for(i=0; i<img->height; i++) {
+			if(read_compressed_scanline(fp, dptr, img->width) == -1) {
+				return -1;
+			}
+			dptr += img->width;
+		}
+
+	} else {
+		/* uncompressed */
+		if(fread(img->pixels, 1, npixels, fp) < npixels) {
+			return -1;
+		}
+	}
+	return 0;
+}
+
+static int read_compressed_scanline(FILE *fp, unsigned char *scanline, int width)
+{
+	int i, count, x = 0;
+	signed char ctl;
+
+	while(x < width) {
+		if(fread(&ctl, 1, 1, fp) < 1) return -1;
+
+		if(ctl == -128) continue;
+
+		if(ctl >= 0) {
+			count = ctl + 1;
+			if(fread(scanline, 1, count, fp) < count) return -1;
+			scanline += count;
+
+		} else {
+			unsigned char pixel;
+			count = 1 - ctl;
+			if(fread(&pixel, 1, 1, fp) < 1) return -1;
+
+			for(i=0; i<count; i++) {
+				*scanline++ = pixel;
+			}
+		}
+
+		x += count;
+	}
+
+	return 0;
+}
+
+static int read16(FILE *fp, uint16_t *res)
+{
+	if(fread(res, sizeof *res, 1, fp) < 1) {
+		return -1;
+	}
+#ifdef LENDIAN
+	*res = swap16(*res);
+#endif
+	return 0;
+}
+
+static int read32(FILE *fp, uint32_t *res)
+{
+	if(fread(res, sizeof *res, 1, fp) < 1) {
+		return -1;
+	}
+#ifdef LENDIAN
+	*res = swap32(*res);
+#endif
 	return 0;
 }
 
