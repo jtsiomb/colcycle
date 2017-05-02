@@ -304,53 +304,56 @@ static int read_crng(FILE *fp, struct crng *crng)
 	return 0;
 }
 
+/* scanline: [bp0 row][bp1 row]...[bpN-1 row][opt mask row]
+ * each uncompressed row is width / 8 bytes
+ */
 static int read_body_ilbm(FILE *fp, struct bitmap_header *bmhd, struct image *img)
 {
 	int i, j, k, bitidx;
+	int rowsz = img->width / 8;
 	unsigned char *src, *dest = img->pixels;
-	unsigned char *scanbuf = alloca(img->width);
-	int scansz = img->width * bmhd->nplanes / 8;
+	unsigned char *rowbuf = alloca(rowsz);
 
 	assert(bmhd->width == img->width);
 	assert(bmhd->height == img->height);
 	assert(img->pixels);
 
-	printf("reading %s ilbm with %d planes\n",
-			bmhd->compression ? "compressed" : "raw", (int)bmhd->nplanes);
-
 	for(i=0; i<img->height; i++) {
-		if(bmhd->compression) {
-			if(read_compressed_scanline(fp, scanbuf, scansz) == -1) {
-				return -1;
-			}
-		} else {
-			if(fread(scanbuf, 1, scansz, fp) < scansz) {
-				return -1;
-			}
-		}
-		if(bmhd->masking & MASK_PLANE) {
-			/* skip the mask (1bpp) */
-			fseek(fp, img->width / 8, SEEK_CUR);
-		}
 
-		/* reorder planes to make the scanline linear */
 		memset(dest, 0, img->width);	/* clear the whole scanline to OR bits into place */
 
-		bitidx = 0;
-		src = scanbuf;
-
-		for(j=0; j<scansz; j++) {
-			unsigned char s = *src++;
-
-			for(k=0; k<8; k++) {
-				dest[k] |= ((s >> (7 - k)) & 1) << bitidx;
+		for(j=0; j<bmhd->nplanes; j++) {
+			// read a row corresponding to bitplane j
+			if(bmhd->compression) {
+				if(read_compressed_scanline(fp, rowbuf, rowsz) == -1) {
+					return -1;
+				}
+			} else {
+				if(fread(rowbuf, 1, rowsz, fp) < rowsz) {
+					return -1;
+				}
 			}
 
-			if(++bitidx >= bmhd->nplanes) {
-				bitidx = 0;
-				dest += 8;
+			// distribute all bits across the linear output scanline
+			src = rowbuf;
+			bitidx = 0;
+
+			for(k=0; k<img->width; k++) {
+				dest[k] |= ((*src >> (7 - bitidx)) & 1) << j;
+
+				if(++bitidx >= 8) {
+					bitidx = 0;
+					++src;
+				}
 			}
 		}
+
+		if(bmhd->masking & MASK_PLANE) {
+			/* skip the mask (1bpp) */
+			fseek(fp, rowsz, SEEK_CUR);
+		}
+
+		dest += img->width;
 	}
 	return 0;
 }
