@@ -13,9 +13,7 @@ converted JSON images used in the `canvascycle` web viewer. Use the included
 Alternatively, to download them manually, follow instructions in the wiki:
 https://github.com/jtsiomb/colcycle/wiki
 
-Git version is now able to load a subset of LBM images which happens to contain
-Mark Ferrari's LBM files available here:
-http://www.randelshofer.ch/animations/anims_ibm/mark_j_ferrari/thu_mark_j_ferrari.html
+Git version is now able to also load LBM images (DOS PBM and Amiga ILBM).
 
 Download
 --------
