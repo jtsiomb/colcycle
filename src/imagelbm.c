@@ -18,18 +18,25 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
-#include <stdint.h>
+#include <inttypes.h>
 #include <string.h>
+#if defined(__WATCOMC__) || defined(_MSC_VER)
+#include <malloc.h>
+#else
 #include <alloca.h>
-#include "image_lbm.h"
-
-#ifndef __BYTE_ORDER__
-#error "__BYTE_ORDER__ undefined"
 #endif
+#include "imagelbm.h"
+
+#ifdef __GNUC__
+#define PACKED	__attribute__((packed))
+#endif
+
+#ifdef __BYTE_ORDER__
 #if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
 #define LENDIAN
 #else
 #define BENDIAN
+#endif
 #endif
 
 #define MKID(a, b, c, d)	(((a) << 24) | ((b) << 16) | ((c) << 8) | (d))
@@ -54,6 +61,9 @@ struct chdr {
 	uint32_t size;
 };
 
+#ifdef __WATCOMC__
+#pragma push(pack, 1)
+#endif
 struct bitmap_header {
 	uint16_t width, height;
 	int16_t xoffs, yoffs;
@@ -64,7 +74,10 @@ struct bitmap_header {
 	uint16_t colorkey;
 	uint8_t aspect_num, aspect_denom;
 	int16_t pgwidth, pgheight;
-} __attribute__ ((packed));
+} PACKED;
+#ifdef __WATCOMC__
+#pragma pop(pack)
+#endif
 
 enum {
 	MASK_NONE,
@@ -94,8 +107,8 @@ static int read_body_pbm(FILE *fp, struct bitmap_header *bmhd, struct image *img
 static int read_compressed_scanline(FILE *fp, unsigned char *scanline, int width);
 static int read16(FILE *fp, uint16_t *res);
 static int read32(FILE *fp, uint32_t *res);
-static inline uint16_t swap16(uint16_t x);
-static inline uint32_t swap32(uint32_t x);
+static uint16_t swap16(uint16_t x);
+static uint32_t swap32(uint32_t x);
 
 int file_is_lbm(FILE *fp)
 {
@@ -367,7 +380,6 @@ static int read_body_pbm(FILE *fp, struct bitmap_header *bmhd, struct image *img
 	assert(bmhd->width == img->width);
 	assert(bmhd->height == img->height);
 	assert(img->pixels);
-	assert(bmhd->nplanes = 1);
 
 	if(bmhd->compression) {
 		for(i=0; i<img->height; i++) {
@@ -439,12 +451,12 @@ static int read32(FILE *fp, uint32_t *res)
 	return 0;
 }
 
-static inline uint16_t swap16(uint16_t x)
+static uint16_t swap16(uint16_t x)
 {
 	return (x << 8) | (x >> 8);
 }
 
-static inline uint32_t swap32(uint32_t x)
+static uint32_t swap32(uint32_t x)
 {
 	return (x << 24) | ((x & 0xff00) << 8) | ((x & 0xff0000) >> 8) | (x >> 24);
 }

@@ -27,7 +27,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <alloca.h>
 #endif
 #include "image.h"
-#include "image_lbm.h"
+#include "imagelbm.h"
 
 #ifndef M_PI
 #define M_PI 3.141593
