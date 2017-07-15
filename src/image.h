@@ -40,6 +40,7 @@ struct colrange {
 
 struct image {
 	int width, height;
+	int bpp;
 	struct color palette[256];
 	struct colrange *range;
 	int num_ranges;

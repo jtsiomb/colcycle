@@ -42,6 +42,7 @@ int gen_test_image(struct image *img)
 
 	img->width = 640;
 	img->height = 480;
+	img->bpp = 8;
 
 	if(!(img->range = malloc(sizeof *img->range))) {
 		return -1;
@@ -473,6 +474,7 @@ static int image_block(FILE *fp, struct image *img)
 	EXPECT(fp, '{');
 
 	img->width = img->height = -1;
+	img->bpp = 8;
 
 	while(attribute(fp, img) != -1) {
 		if(nextc == ',') {
