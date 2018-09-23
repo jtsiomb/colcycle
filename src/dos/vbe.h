@@ -75,9 +75,9 @@ struct vbe_mode_info {
 #pragma pack (pop)
 
 struct vbe_info *vbe_get_info(void);
-struct vbe_mode_info *vbe_get_mode_info(unsigned int mode);
+struct vbe_mode_info *vbe_get_mode_info(int mode);
 
-int vbe_set_mode(unsigned int mode);
+int vbe_set_mode(int mode);
 
 int vbe_set_palette_bits(int bits);
 void vbe_set_palette(int idx, int *col, int count, int bits);

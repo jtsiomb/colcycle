@@ -21,7 +21,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <limits.h>
 #include "vbe.h"
+#include "dpmi.h"
 #include "logger.h"
 
 #define REALPTR(s, o)	(void*)(((uint32_t)(s) << 4) + (uint32_t)(o))
