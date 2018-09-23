@@ -207,6 +207,7 @@ static int read_ilbm_pbm(FILE *fp, uint32_t type, uint32_t size, struct image *i
 			}
 			img->width = bmhd.width;
 			img->height = bmhd.height;
+			img->bpp = bmhd.nplanes;
 			if(bmhd.nplanes > 8) {
 				fprintf(stderr, "%d planes found, only paletized LBM files supported\n", bmhd.nplanes);
 				return -1;
