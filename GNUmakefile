@@ -10,7 +10,7 @@ bin = colcycle
 
 warn = -pedantic -Wall -Wno-unused-function
 #opt = -O3 -ffast-math
-def = -D__FUNCTION__=__func__
+def = -D__FUNCTION__=__func__ -DVERBOSE
 
 CFLAGS = -pedantic $(warn) $(opt) -g $(def) -Isrc $(CFLAGS_$(BACKEND))
 LDFLAGS = -lm $(LDFLAGS_$(BACKEND))

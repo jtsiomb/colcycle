@@ -89,7 +89,9 @@ int load_image(struct image *img, const char *fname)
 	FILE *fp;
 	int c;
 
+#ifdef VERBOSE
 	printf("loading: %s\n", fname);
+#endif
 	if(!(fp = fopen(fname, "rb"))) {
 		fprintf(stderr, "failed to open file: %s: %s\n", fname, strerror(errno));
 		return -1;
@@ -120,7 +122,9 @@ int load_image(struct image *img, const char *fname)
 	}
 	fclose(fp);
 
+#ifdef VERBOSE
 	printf("  [json] %dx%d %dbpp\n", img->width, img->height, img->bpp);
+#endif
 
 	flatten_crange_list(img);
 	return 0;
