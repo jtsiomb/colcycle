@@ -89,6 +89,7 @@ int load_image(struct image *img, const char *fname)
 	FILE *fp;
 	int c;
 
+	printf("loading: %s\n", fname);
 	if(!(fp = fopen(fname, "rb"))) {
 		fprintf(stderr, "failed to open file: %s: %s\n", fname, strerror(errno));
 		return -1;
@@ -118,6 +119,8 @@ int load_image(struct image *img, const char *fname)
 		return -1;
 	}
 	fclose(fp);
+
+	printf("  [json] %dx%d %dbpp\n", img->width, img->height, img->bpp);
 
 	flatten_crange_list(img);
 	return 0;

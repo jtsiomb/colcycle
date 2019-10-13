@@ -159,12 +159,14 @@ int load_image_lbm(struct image *img, FILE *fp)
 				if(read_ilbm_pbm(fp, type, hdr.size, img) == -1) {
 					return -1;
 				}
+				printf("  [ilbm] %dx%d %dbpp\n", img->width, img->height, img->bpp);
 				return 0;
 			}
 			if(type == IFF_PBM) {
 				if(read_ilbm_pbm(fp, type, hdr.size, img) == -1) {
 					return -1;
 				}
+				printf("  [pbm] %dx%d %dbpp\n", img->width, img->height, img->bpp);
 				return 0;
 			}
 		}
