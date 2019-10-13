@@ -1,6 +1,6 @@
 /*
 colcycle - color cycling image viewer
-Copyright (C) 2016  John Tsiombikas <nuclear@member.fsf.org>
+Copyright (C) 2016-2017 John Tsiombikas <nuclear@member.fsf.org>
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -108,6 +108,12 @@ int app_init(int argc, char **argv)
 
 	set_image_palette(img);
 	show_image(img);
+	/* we'll se the palette a second time, just in case show_image had to
+	 * switch video mode and invalidated the palette. We'll keep the first one
+	 * as well to make sure we won't ever show the image with wrong colors for
+	 * a single frame.
+	 */
+	set_image_palette(img);
 	return 0;
 }
 
