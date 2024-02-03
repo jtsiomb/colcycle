@@ -11,3 +11,22 @@ for i in $names; do
 	out=$(echo $i | tr '[:upper:]' '[:lower:]').js
 	wget -O $out $url
 done
+cd ..
+
+lbmnames='CORAL V01 V02 V03 V04 V05AM V05RAIN V05PM V05HAUNT V07 V08AM V08
+V08RAIN V08PM V09 V10 V11AM V12 V13 V14 V15 V16 V16RAIN V16PM V17 V18 V19 V19PM
+V19AURA V20 V21 V22 V23 V24 V25 V25PM V25HEAT V26 V26SNOW V26PM V27 V28 V29
+V29FOG V29PM V30 V30RAIN ST_PLAIN2'
+
+mkdir -p lbmimg && cd lbmimg
+
+for i in $lbmnames; do
+	url="http://www.randelshofer.ch/animations/anims_ibm/mark_j_ferrari/${i}.LBM.zip"
+	if wget $url; then
+		name=$(echo $i | tr '[:upper:]' '[:lower:]')
+		unzip $i.LBM.zip
+		mv $i.LBM $name.lbm
+		rm $i.LBM.zip
+	fi
+done
+cd ..
