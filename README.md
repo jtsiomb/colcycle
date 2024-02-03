@@ -13,18 +13,18 @@ converted JSON images used in the `canvascycle` web viewer. Use the included
 Alternatively, to download them manually, follow instructions in the wiki:
 https://github.com/jtsiomb/colcycle/wiki
 
-Git version is now able to also load LBM images (DOS PBM and Amiga ILBM).
+Since version 1.4, LBM images are also supported (DOS PBM and Amiga ILBM).
 
 Download
 --------
-Latest release (1.3):
-https://github.com/jtsiomb/colcycle/releases/download/v1.3/colcycle-1.3.tar.gz
+Latest release (1.4):
+https://github.com/jtsiomb/colcycle/releases/download/v1.4/colcycle-1.4.tar.gz
 
 Source (git repo): git@github.com:jtsiomb/colcycle.git
 
 License
 -------
-Copyright (C) 2016-2017 John Tsiombikas <nuclear@member.fsf.org>
+Copyright (C) 2016-2024 John Tsiombikas <nuclear@mutantstargoat.com>
 
 This program is free software; feel free to use it, modify and/or redistribute
 it, under the terms of the GNU General Public License version 3, or at your
@@ -33,9 +33,8 @@ for details.
 
 Build instructions
 ------------------
-On DOS you need the Watcom C compiler (OpenWatcom should do, although I've only
-tested Watcom 11.0c). Copy DOS4GW.EXE to the project directory, and type `wmake`
-to build.
+For the DOS build, you will need the Watcom C compiler (OpenWatcom also works).
+Simply type `wmake` to build.
 
 On UNIX you have the option of building with the OpenGL backend, or the SDL
 backend:
